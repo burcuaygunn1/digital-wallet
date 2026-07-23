@@ -1,5 +1,7 @@
 package com.wallet.digitalwallet.controller;
 
+import com.wallet.digitalwallet.dto.AuthResponse;
+import com.wallet.digitalwallet.dto.LoginRequest;
 import com.wallet.digitalwallet.dto.UserRegisterRequest;
 import com.wallet.digitalwallet.dto.UserResponse;
 import com.wallet.digitalwallet.service.UserService;
@@ -7,9 +9,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import com.wallet.digitalwallet.dto.AuthResponse;
-import com.wallet.digitalwallet.dto.LoginRequest;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/users")
