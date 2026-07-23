@@ -1,5 +1,7 @@
 package com.wallet.digitalwallet.service;
 
+import com.wallet.digitalwallet.dto.AuthResponse;
+import com.wallet.digitalwallet.dto.LoginRequest;
 import com.wallet.digitalwallet.dto.UserRegisterRequest;
 import com.wallet.digitalwallet.dto.UserResponse;
 import com.wallet.digitalwallet.entity.User;
@@ -7,7 +9,9 @@ import com.wallet.digitalwallet.entity.Wallet;
 import com.wallet.digitalwallet.exception.BusinessException;
 import com.wallet.digitalwallet.repository.UserRepository;
 import com.wallet.digitalwallet.repository.WalletRepository;
+import com.wallet.digitalwallet.security.JwtService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,35 +24,34 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
     @Transactional
     public UserResponse registerUser(UserRegisterRequest request) {
-        // 1. E-posta adresi sistemde zaten var mı kontrolü
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BusinessException("Bu e-posta adresi zaten kullanımda: " + request.getEmail());
         }
 
-        // 2. Yeni User Entity oluşturma
+        // Şifreyi BCrypt ile güvenli şekilde şifreliyoruz
         User user = User.builder()
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .email(request.getEmail())
-                .password(request.getPassword()) // İlerleyen adımlarda Spring Security ile şifreleyeceğiz
+                .password(passwordEncoder.encode(request.getPassword()))
                 .build();
 
         User savedUser = userRepository.save(user);
 
-        // 3. Yeni kaydolan kullanıcıya otomatik TRY Cüzdanı (IBAN) tanımlama
         Wallet defaultWallet = Wallet.builder()
                 .iban(generateRandomIban())
                 .currency("TRY")
-                .balance(BigDecimal.valueOf(1000.00)) // Hoş geldin bakiyesi (Test için 1000 TL)
+                .balance(BigDecimal.valueOf(1000.00))
                 .user(savedUser)
                 .build();
 
         walletRepository.save(defaultWallet);
 
-        // 4. Güvenli DTO dönüşü
         return UserResponse.builder()
                 .id(savedUser.getId())
                 .firstName(savedUser.getFirstName())
@@ -58,7 +61,19 @@ public class UserService {
                 .build();
     }
 
-    // Rastgele TR ile başlayan 24 haneli benzersiz IBAN üreten yardımcı metod
+    // Kullanıcı Giriş Mantığı
+    public AuthResponse login(LoginRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new BusinessException("E-posta veya şifre hatalı."));
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new BusinessException("E-posta veya şifre hatalı.");
+        }
+
+        String token = jwtService.generateToken(user.getEmail());
+        return new AuthResponse(token, user.getEmail());
+    }
+
     private String generateRandomIban() {
         Random random = new Random();
         StringBuilder iban = new StringBuilder("TR");
