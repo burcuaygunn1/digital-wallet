@@ -4,6 +4,8 @@ import com.wallet.digitalwallet.dto.TransferRequest;
 import com.wallet.digitalwallet.dto.WalletResponse;
 import com.wallet.digitalwallet.entity.Transaction;
 import com.wallet.digitalwallet.entity.Wallet;
+import com.wallet.digitalwallet.exception.BusinessException;
+import com.wallet.digitalwallet.exception.ResourceNotFoundException;
 import com.wallet.digitalwallet.repository.TransactionRepository;
 import com.wallet.digitalwallet.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +44,7 @@ public class WalletService {
 
         // 2. Cüzdanların varlığını kontrol et
         Wallet fromWallet = walletRepository.findByIban(request.getFromIban())
-                .orElseThrow(() -> new RuntimeException("Gönderen cüzdan bulunamadı: " + request.getFromIban()));
+                .orElseThrow(() -> new ResourceNotFoundException("Gönderen cüzdan bulunamadı: " + request.getFromIban()));
 
         Wallet toWallet = walletRepository.findByIban(request.getToIban())
                 .orElseThrow(() -> new RuntimeException("Alıcı cüzdan bulunamadı: " + request.getToIban()));
@@ -54,7 +56,7 @@ public class WalletService {
 
         // 4. Bakiye yeterli mi kontrolü
         if (fromWallet.getBalance().compareTo(request.getAmount()) < 0) {
-            throw new RuntimeException("Yetersiz bakiye! Mevcut bakiye: " + fromWallet.getBalance());
+            throw new BusinessException("Yetersiz bakiye! Mevcut bakiye: " + fromWallet.getBalance());
         }
 
         // 5. Bakiyeleri güncelle (Gönderenden düş, alıcıya ekle)

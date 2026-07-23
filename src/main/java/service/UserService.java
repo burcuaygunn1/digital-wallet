@@ -4,6 +4,7 @@ import com.wallet.digitalwallet.dto.UserRegisterRequest;
 import com.wallet.digitalwallet.dto.UserResponse;
 import com.wallet.digitalwallet.entity.User;
 import com.wallet.digitalwallet.entity.Wallet;
+import com.wallet.digitalwallet.exception.BusinessException;
 import com.wallet.digitalwallet.repository.UserRepository;
 import com.wallet.digitalwallet.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +25,7 @@ public class UserService {
     public UserResponse registerUser(UserRegisterRequest request) {
         // 1. E-posta adresi sistemde zaten var mı kontrolü
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Bu e-posta adresi zaten kullanımda: " + request.getEmail());
+            throw new BusinessException("Bu e-posta adresi zaten kullanımda: " + request.getEmail());
         }
 
         // 2. Yeni User Entity oluşturma
