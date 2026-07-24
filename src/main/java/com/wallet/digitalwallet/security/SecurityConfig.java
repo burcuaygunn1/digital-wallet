@@ -25,11 +25,13 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         // Herkese açık (Public) endpoint'ler
+                        .requestMatchers("/", "/index.html", "/app.js", "/favicon.ico", "/*.css", "/*.js").permitAll()
                         .requestMatchers("/api/v1/users/login", "/api/v1/users/register").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
 
                         // Kimlik doğrulaması gerektiren Transaction endpoint'leri
                         .requestMatchers("/api/v1/transactions/**").authenticated()
+                        .requestMatchers("/api/v1/wallets/**").authenticated()
 
                         // Diğer tüm istekler için kimlik doğrulaması şartı
                         .anyRequest().authenticated()
