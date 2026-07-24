@@ -11,6 +11,7 @@ import com.wallet.digitalwallet.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.wallet.digitalwallet.dto.TransactionResponse;
 
 import java.util.List;
 
@@ -78,5 +79,30 @@ public class WalletService {
         transactionRepository.save(transaction);
 
         return "Transfer başarıyla gerçekleşti. Gönderilen Tutar: " + request.getAmount() + " " + fromWallet.getCurrency();
+    }
+    // Kullanıcının Cüzdanına Ait İşlem Geçmişini Getir
+    public List<TransactionResponse> getTransactionHistory(String iban) {
+        // Cüzdanın varlığını doğrula
+        Wallet wallet = walletRepository.findByIban(iban)
+                .orElseThrow(() -> new ResourceNotFoundException("Cüzdan bulunamadı: " + iban));
+
+        List<Transaction> transactions = transactionRepository.findAllByIbanOrderByCreatedAtDesc(iban);
+
+        return transactions.stream().map(t -> {
+            // İşlem bu IBAN için GELEN mi yoksa GİDEN mi kontrolü
+            String direction = t.getFromIban().equals(iban) ? "OUTGOING" : "INCOMING";
+
+            return TransactionResponse.builder()
+                    .id(t.getId())
+                    .fromIban(t.getFromIban())
+                    .toIban(t.getToIban())
+                    .amount(t.getAmount())
+                    .currency(t.getCurrency())
+                    .transactionType(t.getTransactionType())
+                    .status(t.getStatus())
+                    .createdAt(t.getCreatedAt())
+                    .direction(direction)
+                    .build();
+        }).toList();
     }
 }

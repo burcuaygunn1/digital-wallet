@@ -1,5 +1,6 @@
 package com.wallet.digitalwallet.controller;
 
+import com.wallet.digitalwallet.dto.TransactionResponse;
 import com.wallet.digitalwallet.dto.TransferRequest;
 import com.wallet.digitalwallet.dto.WalletResponse;
 import com.wallet.digitalwallet.service.WalletService;
@@ -26,5 +27,11 @@ public class WalletController {
     public ResponseEntity<String> transferMoney(@Valid @RequestBody TransferRequest request) {
         String result = walletService.transferMoney(request);
         return ResponseEntity.ok(result);
-    }
+        }
+        // YENİ: Cüzdan İşlem Geçmişi Endpoint'i
+    @GetMapping("/{iban}/transactions")
+    public ResponseEntity<List<TransactionResponse>> getTransactionHistory (@PathVariable String iban){
+         return ResponseEntity.ok(walletService.getTransactionHistory(iban));
+        }
+
 }
