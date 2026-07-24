@@ -36,29 +36,45 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String jwt;
         final String userEmail;
 
-        // Başlık yoksa veya "Bearer " ile başlamıyorsa devam et
+        // Başlık yoksa veya "Bearer " ile başlamıyorsa zincire devam et
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
         jwt = authHeader.substring(7);
-        userEmail = jwtService.extractUsername(jwt);
 
-        if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            var userOptional = userRepository.findByEmail(userEmail);
+        try {
+            userEmail = jwtService.extractUsername(jwt);
 
-            if (userOptional.isPresent() && jwtService.isTokenValid(jwt, userEmail)) {
-                UserDetails userDetails = new User(userEmail, "", Collections.emptyList());
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userDetails,
-                        null,
-                        userDetails.getAuthorities()
-                );
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                var userOptional = userRepository.findByEmail(userEmail);
+
+                if (userOptional.isPresent()) {
+                    // Kullanıcı veritabanında var, token geçerli mi kontrol et
+                    if (jwtService.isTokenValid(jwt, userEmail)) {
+                        UserDetails userDetails = new User(userEmail, "", Collections.emptyList());
+
+                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                                userDetails,
+                                null,
+                                userDetails.getAuthorities()
+                        );
+                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                        // Kullanıcıyı Spring Security Oturumuna (Context) Yerleştir
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                    } else {
+                        System.err.println("JWT Hatasi: Token gecerli degil (isTokenValid false dondu).");
+                    }
+                } else {
+                    System.err.println("JWT Hatasi: Token icindeki e-posta veritabaninda bulunamadi -> " + userEmail);
+                }
             }
+        } catch (Exception e) {
+            System.err.println("JWT Dogrulama Istisnasi: " + e.getMessage());
         }
+
         filterChain.doFilter(request, response);
     }
 }

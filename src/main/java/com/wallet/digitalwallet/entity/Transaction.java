@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Transaction {
+public class Transaction extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,16 +32,13 @@ public class Transaction {
     private String currency;
 
     @Column(name = "transaction_type", nullable = false)
-    private String transactionType; // TRANSFER, DEPOSIT, WITHDRAW
+    private String transactionType;
 
     @Column(nullable = false)
-    private String status; // SUCCESS, FAILED, PENDING
+    private String status;
 
+    // Kısıtlamaya takılmamak için varsayılan zaman ataması
+    @Builder.Default
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-    }
+    private LocalDateTime createdAt = LocalDateTime.now();
 }

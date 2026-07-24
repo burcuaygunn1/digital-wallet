@@ -1,5 +1,6 @@
 package com.wallet.digitalwallet.service;
 
+import com.wallet.digitalwallet.dto.TransactionResponse;
 import com.wallet.digitalwallet.dto.TransferRequest;
 import com.wallet.digitalwallet.dto.WalletResponse;
 import com.wallet.digitalwallet.entity.Transaction;
@@ -11,9 +12,9 @@ import com.wallet.digitalwallet.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.wallet.digitalwallet.dto.TransactionResponse;
-import java.math.BigDecimal;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -22,6 +23,7 @@ public class WalletService {
 
     private final WalletRepository walletRepository;
     private final TransactionRepository transactionRepository;
+    private final ExchangeRateService exchangeRateService; // Döviz servisi inject edildi
 
     // Kullanıcının Cüzdanlarını Getir
     public List<WalletResponse> getUserWallets(Long userId) {
@@ -35,42 +37,42 @@ public class WalletService {
                 .toList();
     }
 
-    // Para Transfer İşlemi (ACID - Transactional Güvencesiyle)
+    // Para Transfer İşlemi (Döviz Dönüşümlü & ACID - Transactional Güvencesiyle)
     @Transactional
     public String transferMoney(TransferRequest request) {
-        // 1. Aynı IBAN'a transfer engeli
         if (request.getFromIban().equals(request.getToIban())) {
-            throw new RuntimeException("Kendi cüzdanınıza transfer yapamazsınız.");
+            throw new BusinessException("Aynı cüzdana transfer yapılamaz.");
         }
+
         if (request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessException("Transfer tutarı 0'dan büyük olmalıdır.");
         }
 
-        // 2. Cüzdanların varlığını kontrol et
+        // Kilitli veritabanı sorguları (Race condition koruması)
         Wallet fromWallet = walletRepository.findByIbanWithLock(request.getFromIban())
                 .orElseThrow(() -> new ResourceNotFoundException("Gönderen cüzdan bulunamadı: " + request.getFromIban()));
 
         Wallet toWallet = walletRepository.findByIbanWithLock(request.getToIban())
-                .orElseThrow(() -> new RuntimeException("Alıcı cüzdan bulunamadı: " + request.getToIban()));
+                .orElseThrow(() -> new ResourceNotFoundException("Alıcı cüzdan bulunamadı: " + request.getToIban()));
 
-        // 3. Para birimi uyumluluğu kontrolü
-        if (!fromWallet.getCurrency().equals(toWallet.getCurrency())) {
-            throw new RuntimeException("Farklı para birimleri arasında doğrudan transfer yapılamaz.");
-        }
-
-        // 4. Bakiye yeterli mi kontrolü
         if (fromWallet.getBalance().compareTo(request.getAmount()) < 0) {
             throw new BusinessException("Yetersiz bakiye! Mevcut bakiye: " + fromWallet.getBalance());
         }
 
-        // 5. Bakiyeleri güncelle (Gönderenden düş, alıcıya ekle)
+        // --- DÖVİZ ENTEGRASYONU AŞAMASI ---
+        BigDecimal exchangeRate = exchangeRateService.getExchangeRate(fromWallet.getCurrency(), toWallet.getCurrency());
+        BigDecimal convertedAmount = exchangeRateService.convert(request.getAmount(), exchangeRate);
+
+        // Gönderenin bakiyesinden gönderdiği tutar düşer
         fromWallet.setBalance(fromWallet.getBalance().subtract(request.getAmount()));
-        toWallet.setBalance(toWallet.getBalance().add(request.getAmount()));
+
+        // Alıcının bakiyesine kur ile dönüştürülmüş tutar eklenir
+        toWallet.setBalance(toWallet.getBalance().add(convertedAmount));
 
         walletRepository.save(fromWallet);
         walletRepository.save(toWallet);
 
-        // 6. İşlem geçmişini (Transaction) kaydet
+        // İşlem kaydı oluştur
         Transaction transaction = Transaction.builder()
                 .fromIban(fromWallet.getIban())
                 .toIban(toWallet.getIban())
@@ -78,12 +80,15 @@ public class WalletService {
                 .currency(fromWallet.getCurrency())
                 .transactionType("TRANSFER")
                 .status("SUCCESS")
+                .createdAt(LocalDateTime.now())
                 .build();
 
         transactionRepository.save(transaction);
 
-        return "Transfer başarıyla gerçekleşti. Gönderilen Tutar: " + request.getAmount() + " " + fromWallet.getCurrency();
+        return String.format("Transfer başarıyla tamamlandı. Dönüştürülen Tutar: %s %s (Kur: %s)",
+                convertedAmount, toWallet.getCurrency(), exchangeRate);
     }
+
     // Kullanıcının Cüzdanına Ait İşlem Geçmişini Getir
     public List<TransactionResponse> getTransactionHistory(String iban) {
         // Cüzdanın varlığını doğrula
