@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.wallet.digitalwallet.dto.TransactionResponse;
+import java.math.BigDecimal;
 
 import java.util.List;
 
@@ -41,12 +42,15 @@ public class WalletService {
         if (request.getFromIban().equals(request.getToIban())) {
             throw new RuntimeException("Kendi cüzdanınıza transfer yapamazsınız.");
         }
+        if (request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException("Transfer tutarı 0'dan büyük olmalıdır.");
+        }
 
         // 2. Cüzdanların varlığını kontrol et
-        Wallet fromWallet = walletRepository.findByIban(request.getFromIban())
+        Wallet fromWallet = walletRepository.findByIbanWithLock(request.getFromIban())
                 .orElseThrow(() -> new ResourceNotFoundException("Gönderen cüzdan bulunamadı: " + request.getFromIban()));
 
-        Wallet toWallet = walletRepository.findByIban(request.getToIban())
+        Wallet toWallet = walletRepository.findByIbanWithLock(request.getToIban())
                 .orElseThrow(() -> new RuntimeException("Alıcı cüzdan bulunamadı: " + request.getToIban()));
 
         // 3. Para birimi uyumluluğu kontrolü
