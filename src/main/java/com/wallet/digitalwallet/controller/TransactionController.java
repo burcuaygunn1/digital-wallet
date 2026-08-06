@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -47,15 +48,26 @@ public class TransactionController {
     }
 
     /**
-     * Dekont İndirme Endpoint'i
+     * Dekont Görüntüleme ve İndirme Endpoint'i
+     * @param id İşlem ID
+     * @param action 'inline' (tarayıcıda aç) veya 'download'/'attachment' (dosya indir)
      */
     @GetMapping("/{id}/pdf")
-    public ResponseEntity<byte[]> downloadReceipt(@PathVariable Long id) {
+    public ResponseEntity<byte[]> getReceipt(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "inline") String action) {
+
         byte[] pdfBytes = pdfService.generateTransactionReceipt(id);
+
+        boolean isDownload = "download".equalsIgnoreCase(action) || "attachment".equalsIgnoreCase(action);
+
+        ContentDisposition contentDisposition = (isDownload ? ContentDisposition.attachment() : ContentDisposition.inline())
+                .filename("dekont_" + id + ".pdf")
+                .build();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDispositionFormData("attachment", "dekont_" + id + ".pdf");
+        headers.setContentDisposition(contentDisposition);
 
         return ResponseEntity.ok()
                 .headers(headers)

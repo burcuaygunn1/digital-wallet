@@ -3,6 +3,73 @@ const API_BASE_URL = 'http://localhost:8080/api/v1';
 // Global Cüzdan Hafızası
 let allWallets = [];
 
+// --- Modern ve Şık Bildirim Gösterici (Toast) ---
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+
+    let bgColor = 'bg-white';
+    let textColor = 'text-gray-800';
+    let icon = 'fa-circle-info';
+    let borderColor = 'border-blue-500';
+
+    if (type === 'success') {
+        borderColor = 'border-green-500';
+        icon = 'fa-circle-check text-green-500';
+    } else if (type === 'error') {
+        borderColor = 'border-red-500';
+        icon = 'fa-circle-xmark text-red-500';
+    } else if (type === 'warning') {
+        borderColor = 'border-yellow-500';
+        icon = 'fa-triangle-exclamation text-yellow-500';
+    } else if (type === 'info') {
+        borderColor = 'border-blue-500';
+        icon = 'fa-circle-info text-blue-500';
+    }
+
+    toast.className = `flex items-center p-4 min-w-[300px] ${bgColor} ${textColor} rounded-xl shadow-2xl border-l-4 ${borderColor} transform translate-x-full transition-all duration-300 ease-out opacity-0 dark:bg-gray-800 dark:text-white`;
+
+    toast.innerHTML = `
+        <div class="flex-shrink-0 text-xl mr-3">
+            <i class="fa-solid ${icon}"></i>
+        </div>
+        <div class="flex-1 text-sm font-medium">
+            ${message}
+        </div>
+        <button class="ml-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    `;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.remove('translate-x-full', 'opacity-0');
+    }, 10);
+
+    const closeBtn = toast.querySelector('button');
+    closeBtn.onclick = () => removeToast(toast);
+
+    setTimeout(() => {
+        removeToast(toast);
+    }, 4000);
+}
+
+function removeToast(toast) {
+    if (!toast) return;
+    toast.classList.add('translate-x-full', 'opacity-0');
+    setTimeout(() => {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+    }, 300);
+}
+
+function showAlert(elementId, message, bgClass) {
+    const isError = bgClass && (bgClass.includes('red') || bgClass.includes('error'));
+    showToast(message, isError ? 'error' : 'success');
+}
+
 // --- Dark Mode Başlangıç Kontrolü ---
 if (localStorage.getItem('theme') === 'dark') {
     document.documentElement.classList.add('dark');
@@ -15,6 +82,15 @@ function openModal(modalId) {
 
 function closeModal(modalId) {
     document.getElementById(modalId)?.classList.add('hidden');
+
+    // PDF modalı kapatılıyorsa iframe kaynağını temizle ve bellekten düşür
+    if (modalId === 'pdfModal') {
+        const iframe = document.getElementById('pdfIframe');
+        if (iframe && iframe.src) {
+            window.URL.revokeObjectURL(iframe.src);
+            iframe.src = '';
+        }
+    }
 }
 
 function openDepositModal() {
@@ -26,7 +102,7 @@ function openDepositModal() {
 }
 
 function openExchangeModal() {
-    updateWalletSelector(); // Seçenekleri tazelemek için
+    updateWalletSelector();
     openModal('exchangeModal');
 }
 
@@ -60,7 +136,6 @@ function updateWalletSelector() {
         selector.innerHTML = allWallets.map(w => `<option value="${w.iban}">${w.currency} Cüzdanı</option>`).join('');
     }
 
-    // Exchange modalındaki dropdownları doldur
     const fromSelect = document.getElementById('exchangeFrom');
     const toSelect = document.getElementById('exchangeTo');
     if (fromSelect && toSelect) {
@@ -75,6 +150,7 @@ function onWalletChange() {
     const wallet = allWallets.find(w => w.iban === selectedIban);
     if (wallet) {
         renderActiveWallet(wallet);
+        loadTransactions(); // Seçilen cüzdana göre işlemleri yenile
     }
 }
 
@@ -101,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Ayarlar Sekme Geçişleri ---
     document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', () => {
             const targetTab = btn.getAttribute('data-tab');
             if (targetTab) switchTab(targetTab, btn);
         });
@@ -147,21 +223,21 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.ok) {
                 const data = await response.json();
                 localStorage.setItem('jwtToken', data.token);
+                showToast('Kayıt başarıyla tamamlandı!', 'success');
                 showDashboard();
             } else {
-                let errorMessage = 'Bilgileri kontrol edin.';
+                let message = "Kayıt işlemi başarısız.";
                 try {
-                    const errData = await response.json();
-                    errorMessage = errData.message || errorMessage;
+                    const errorData = await response.json();
+                    message = errorData.message || message;
                 } catch (err) {
-                    const errText = await response.text();
-                    if (errText) errorMessage = errText;
+                    message = await response.text() || message;
                 }
-                showAlert('authAlert', `Kayıt Hatası: ${errorMessage}`, 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300');
+                showToast(message, 'error');
             }
         } catch (error) {
             console.error('Register error:', error);
-            showAlert('authAlert', 'Sunucuya bağlanılamadı!', 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300');
+            showToast('Sunucuya bağlanılamadı!', 'error');
         }
     });
 
@@ -181,13 +257,21 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.ok) {
                 const data = await response.json();
                 localStorage.setItem('jwtToken', data.token);
+                showToast('Giriş başarılı!', 'success');
                 showDashboard();
             } else {
-                showAlert('authAlert', 'Giriş başarısız! Bilgilerinizi kontrol edin.', 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300');
+                let message = "Giriş başarısız! Bilgilerinizi kontrol edin.";
+                try {
+                    const errorData = await response.json();
+                    message = errorData.message || message;
+                } catch (err) {
+                    message = await response.text() || message;
+                }
+                showToast(message, 'error');
             }
         } catch (error) {
             console.error('Login error:', error);
-            showAlert('authAlert', 'Sunucuya bağlanılamadı!', 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300');
+            showToast('Sunucuya bağlanılamadı!', 'error');
         }
     });
 
@@ -218,19 +302,31 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (response.ok) {
-                showAlert('transferAlert', 'Transfer başarıyla gerçekleşti!', 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300');
+                let successMsg = "Transfer başarıyla gerçekleşti!";
+                try {
+                    const text = await response.text();
+                    if (text) successMsg = text;
+                } catch (e) {}
+
+                showToast(successMsg, 'success');
                 document.getElementById('transferForm').reset();
                 await loadWalletData();
                 await loadTransactions();
             } else if (response.status === 401 || response.status === 403) {
                 handleUnauthorized();
             } else {
-                const errText = await response.text();
-                showAlert('transferAlert', `Hata: ${errText || 'Transfer başarısız.'}`, 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300');
+                let message = "Transfer işlemi başarısız.";
+                try {
+                    const errorData = await response.json();
+                    message = errorData.message || message;
+                } catch (err) {
+                    message = await response.text() || message;
+                }
+                showToast(message, 'error');
             }
         } catch (error) {
             console.error('Transfer error:', error);
-            showAlert('transferAlert', 'İşlem sırasında bir hata oluştu.', 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300');
+            showToast('İşlem sırasında bir hata oluştu.', 'error');
         }
     });
 
@@ -254,27 +350,26 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (response.ok) {
-                showAlert('depositAlert', 'Bakiye yükleme başarılı!', 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300');
+                showToast("Bakiye başarıyla yüklendi!", 'success');
                 document.getElementById('depositForm').reset();
-                setTimeout(() => closeModal('depositModal'), 1200);
+                closeModal('depositModal');
                 await loadWalletData();
                 await loadTransactions();
             } else if (response.status === 401 || response.status === 403) {
                 handleUnauthorized();
             } else {
-                let errorMessage = 'Bakiye yükleme başarısız.';
+                let message = "Bakiye yükleme başarısız.";
                 try {
-                    const errData = await response.json();
-                    errorMessage = errData.message || errorMessage;
+                    const errorData = await response.json();
+                    message = errorData.message || message;
                 } catch (err) {
-                    const errText = await response.text();
-                    if (errText) errorMessage = errText;
+                    message = await response.text() || message;
                 }
-                showAlert('depositAlert', `Hata: ${errorMessage}`, 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300');
+                showToast(message, 'error');
             }
         } catch (error) {
             console.error('Deposit error:', error);
-            showAlert('depositAlert', 'Bakiye yüklenirken hata oluştu.', 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300');
+            showToast('Bakiye yüklenirken bir hata oluştu.', 'error');
         }
     });
 
@@ -293,19 +388,22 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (response.ok) {
-                alert("Yeni cüzdanınız başarıyla oluşturuldu!");
+                showToast("Yeni cüzdanınız başarıyla oluşturuldu!", 'success');
                 closeModal('createWalletModal');
                 await loadWalletData();
             } else {
-                let errMessage = 'Cüzdan oluşturulamadı.';
+                let message = "Cüzdan oluşturulamadı.";
                 try {
-                    const err = await response.json();
-                    errMessage = err.message || errMessage;
-                } catch (e) {}
-                alert(errMessage);
+                    const errorData = await response.json();
+                    message = errorData.message || message;
+                } catch (err) {
+                    message = await response.text() || message;
+                }
+                showToast(message, 'error');
             }
         } catch (error) {
             console.error('Create wallet error:', error);
+            showToast("Sunucu hatası oluştu.", 'error');
         }
     });
 
@@ -320,7 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const amount = parseFloat(document.getElementById('exchangeAmount').value);
 
         if (fromIban === toIban) {
-            alert("Aynı cüzdanlar arasında döviz dönüştürme yapamazsınız!");
+            showToast("Aynı cüzdanlar arasında döviz dönüştürme yapamazsınız!", 'warning');
             return;
         }
 
@@ -335,22 +433,23 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (response.ok) {
-                alert("Döviz dönüşümü başarıyla tamamlandı!");
+                showToast("Döviz dönüşümü başarıyla tamamlandı!", 'success');
                 closeModal('exchangeModal');
                 await loadWalletData();
                 await loadTransactions();
             } else {
-                let errMsg = 'Dönüşüm başarısız.';
+                let message = "Dönüşüm başarısız.";
                 try {
-                    const err = await response.json();
-                    errMsg = err.message || errMsg;
-                } catch (e) {
-                    errMsg = await response.text();
+                    const errorData = await response.json();
+                    message = errorData.message || message;
+                } catch (err) {
+                    message = await response.text() || message;
                 }
-                alert(errMsg);
+                showToast(message, 'error');
             }
         } catch (error) {
             console.error('Exchange error:', error);
+            showToast("Dönüşüm gerçekleştirilirken bir hata oluştu.", 'error');
         }
     });
 
@@ -371,6 +470,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target.id === 'depositModal') closeModal('depositModal');
         if (e.target.id === 'exchangeModal') closeModal('exchangeModal');
         if (e.target.id === 'createWalletModal') closeModal('createWalletModal');
+        if (e.target.id === 'pdfModal') closeModal('pdfModal');
     });
 
     // --- Profil Güncelleme ---
@@ -393,16 +493,23 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (response.ok) {
-                showAlert('settingsAlert', 'Profil bilgileriniz başarıyla güncellendi!', 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300');
+                showToast('Profil bilgileriniz başarıyla güncellendi!', 'success');
                 document.getElementById('headerUserName').innerText = `${firstName} ${lastName}`;
             } else if (response.status === 401 || response.status === 403) {
                 handleUnauthorized();
             } else {
-                showAlert('settingsAlert', 'Profil güncellenirken bir hata oluştu.', 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300');
+                let message = "Profil güncellenirken bir hata oluştu.";
+                try {
+                    const errorData = await response.json();
+                    message = errorData.message || message;
+                } catch (err) {
+                    message = await response.text() || message;
+                }
+                showToast(message, 'error');
             }
         } catch (error) {
             console.error('Update profile error:', error);
-            showAlert('settingsAlert', 'Sunucu hatası!', 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300');
+            showToast('Sunucu hatası!', 'error');
         }
     });
 
@@ -430,24 +537,23 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.ok) {
                 const data = await response.json();
                 localStorage.setItem('jwtToken', data.token);
-                showAlert('settingsAlert', 'E-posta başarıyla güncellendi! Sayfa yenileniyor...', 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300');
+                showToast('E-posta adresiniz başarıyla güncellendi.', 'success');
                 setTimeout(() => location.reload(), 2000);
             } else if (response.status === 401 || response.status === 403) {
                 handleUnauthorized();
             } else {
-                let errorMsg = 'E-posta güncellenemedi.';
+                let message = "E-posta güncellenemedi.";
                 try {
-                    const errData = await response.json();
-                    errorMsg = errData.message || errorMsg;
+                    const errorData = await response.json();
+                    message = errorData.message || message;
                 } catch (err) {
-                    const errText = await response.text();
-                    if (errText) errorMsg = errText;
+                    message = await response.text() || message;
                 }
-                showAlert('settingsAlert', `Hata: ${errorMsg}`, 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300');
+                showToast(message, 'error');
             }
         } catch (error) {
             console.error('Update email error:', error);
-            showAlert('settingsAlert', 'Sunucuya bağlanılamadı!', 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300');
+            showToast('Sunucuya bağlanılamadı!', 'error');
         }
     });
 
@@ -471,25 +577,24 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (response.ok) {
-                showAlert('settingsAlert', 'Şifreniz başarıyla güncellendi!', 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300');
+                showToast('Şifreniz başarıyla güncellendi!', 'success');
                 document.getElementById('updatePasswordForm').reset();
-                setTimeout(() => closeModal('settingsModal'), 2000);
+                setTimeout(() => closeModal('settingsModal'), 1500);
             } else if (response.status === 401 || response.status === 403) {
                 handleUnauthorized();
             } else {
-                const errText = await response.text();
-                let msg = "Şifre güncellenemedi.";
+                let message = "Şifre güncellenemedi.";
                 try {
-                    const errObj = JSON.parse(errText);
-                    msg = errObj.message || msg;
+                    const errorData = await response.json();
+                    message = errorData.message || message;
                 } catch (err) {
-                    if (errText) msg = errText;
+                    message = await response.text() || message;
                 }
-                showAlert('settingsAlert', msg, 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300');
+                showToast(message, 'error');
             }
         } catch (error) {
             console.error('Update password error:', error);
-            showAlert('settingsAlert', 'Sunucu hatası!', 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300');
+            showToast('Sunucu hatası!', 'error');
         }
     });
 });
@@ -565,12 +670,10 @@ async function loadWalletData() {
 
         if (response.ok) {
             const data = await response.json();
-            // Backend'den dizi dönmüyorsa diziye çevir
             allWallets = Array.isArray(data) ? data : [data];
 
             updateWalletSelector();
 
-            // Ekran yüklendiğinde var olan seçili cüzdanı veya ilk cüzdanı göster
             const currentSelectorVal = document.getElementById('walletSelector')?.value;
             const activeWallet = allWallets.find(w => w.iban === currentSelectorVal) || allWallets[0];
 
@@ -605,10 +708,10 @@ async function loadTransactions() {
                 return;
             }
 
-            const currentWalletIban = document.getElementById('walletIban')?.innerText || '';
+            const currentIban = document.getElementById('walletIban')?.innerText || '';
 
             transactions.forEach(tx => {
-                const isIncoming = currentWalletIban && tx.toIban === currentWalletIban;
+                const isIncoming = currentIban && tx.toIban === currentIban;
                 const currency = tx.currency || 'TL';
 
                 const tr = document.createElement('tr');
@@ -620,9 +723,14 @@ async function loadTransactions() {
                     <td class="p-3 font-bold ${isIncoming ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}">
                         ${isIncoming ? '+' : '-'}${tx.amount} ${currency}
                     </td>
-                    <td class="p-3">
-                        <button onclick="downloadPdf(${tx.id})" class="text-indigo-600 dark:text-indigo-400 hover:underline text-xs">
-                             <i class="fa-solid fa-file-pdf"></i> Dekont
+                    <td class="p-3 flex items-center justify-center space-x-3">
+                        <!-- Görüntüle Butonu -->
+                        <button onclick="handlePdf(${tx.id}, 'view')" class="text-blue-500 hover:text-blue-700 transition" title="Önizle">
+                            <i class="fa-solid fa-eye text-base"></i>
+                        </button>
+                        <!-- İndir Butonu -->
+                        <button onclick="handlePdf(${tx.id}, 'download')" class="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 transition" title="İndir">
+                            <i class="fa-solid fa-file-arrow-down text-base"></i>
                         </button>
                     </td>
                 `;
@@ -636,41 +744,58 @@ async function loadTransactions() {
     }
 }
 
-async function downloadPdf(id) {
+// --- PDF İşleme Fonksiyonu (Görüntüle / İndir) ---
+async function handlePdf(id, action) {
     const token = localStorage.getItem('jwtToken');
-    if (!token) return;
+    if (!token) return handleUnauthorized();
+
+    // Önbellek sorunlarını önlemek için t=... parametresi eklendi
+    const actionParam = action === 'download' ? 'download' : 'inline';
+    const url = `${API_BASE_URL}/transactions/${id}/pdf?action=${actionParam}&t=${Date.now()}`;
 
     try {
-        const response = await fetch(`${API_BASE_URL}/transactions/${id}/pdf`, {
+        const response = await fetch(url, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
         if (response.ok) {
             const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `dekont_${id}.pdf`;
-            a.click();
-            window.URL.revokeObjectURL(url);
+            const fileUrl = window.URL.createObjectURL(blob);
+
+            if (action === 'download') {
+                const a = document.createElement('a');
+                a.href = fileUrl;
+                a.download = `dekont_${id}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(fileUrl);
+                showToast('Dekont indirildi.', 'info');
+            } else {
+                // Önizleme modalını aç ve iframe/download butonunu güncelle
+                const iframe = document.getElementById('pdfIframe');
+                const downloadLink = document.getElementById('pdfDownloadLink');
+
+                if (iframe) iframe.src = fileUrl;
+                if (downloadLink) {
+                    downloadLink.href = fileUrl;
+                    downloadLink.download = `dekont_${id}.pdf`;
+                }
+
+                openModal('pdfModal');
+            }
         } else if (response.status === 401 || response.status === 403) {
             handleUnauthorized();
+        } else {
+            showToast('Dekont oluşturulamadı.', 'error');
         }
     } catch (e) {
-        console.error('PDF download error:', e);
+        console.error('PDF error:', e);
+        showToast('Dekont alınırken bir hata oluştu.', 'error');
     }
 }
 
 function handleUnauthorized() {
     localStorage.removeItem('jwtToken');
     window.location.reload();
-}
-
-function showAlert(elementId, message, bgClass) {
-    const el = document.getElementById(elementId);
-    if (!el) return;
-    el.className = `p-3 text-sm rounded-lg ${bgClass}`;
-    el.innerText = message;
-    el.classList.remove('hidden');
-    setTimeout(() => el.classList.add('hidden'), 5000);
 }

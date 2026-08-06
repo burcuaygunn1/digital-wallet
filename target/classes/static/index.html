@@ -184,7 +184,7 @@
                         <th class="p-4">Gönderen IBAN</th>
                         <th class="p-4">Alıcı IBAN</th>
                         <th class="p-4">Tutar</th>
-                        <th class="p-4">İşlem</th>
+                        <th class="p-4 text-center">İşlem / Dekont</th>
                     </tr>
                     </thead>
                     <tbody id="transactionTableBody" class="divide-y divide-gray-100 dark:divide-gray-700 text-sm text-gray-700 dark:text-gray-200">
@@ -366,6 +366,33 @@
         </div>
     </div>
 </div>
+
+<!-- PDF Önizleme Modalı (Eklendi) -->
+<div id="pdfModal" class="hidden fixed inset-0 bg-black/60 dark:bg-opacity-80 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <!-- Modal Header -->
+        <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800">
+            <h3 class="text-lg font-bold text-gray-800 dark:text-white flex items-center">
+                <i class="fa-solid fa-file-pdf text-red-500 mr-2"></i> İşlem Dekontu Önizleme
+            </h3>
+            <div class="flex items-center space-x-2">
+                <a id="pdfDownloadLink" href="#" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 px-3 rounded-lg shadow transition flex items-center">
+                    <i class="fa-solid fa-download mr-1.5"></i> İndir
+                </a>
+                <button onclick="closeModal('pdfModal')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-2 rounded-lg">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+        </div>
+        <!-- Modal İçerik (iframe) -->
+        <div class="flex-1 bg-gray-100 dark:bg-gray-900">
+            <iframe id="pdfIframe" class="w-full h-full border-none" src=""></iframe>
+        </div>
+    </div>
+</div>
+
+<!-- Modern Bildirim (Toast) Konteynırı -->
+<div id="toastContainer" class="fixed top-5 right-5 z-[100] flex flex-col gap-3"></div>
 
 <script src="app.js"></script>
 </body>

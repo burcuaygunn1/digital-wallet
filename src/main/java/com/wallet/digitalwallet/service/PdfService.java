@@ -5,74 +5,107 @@ import com.itextpdf.text.pdf.PdfPCell;
 import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
 import com.wallet.digitalwallet.entity.Transaction;
+import com.wallet.digitalwallet.entity.Wallet;
 import com.wallet.digitalwallet.exception.ResourceNotFoundException;
 import com.wallet.digitalwallet.repository.TransactionRepository;
+import com.wallet.digitalwallet.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.ByteArrayOutputStream;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class PdfService {
 
     private final TransactionRepository transactionRepository;
+    private final WalletRepository walletRepository;
 
+    /**
+     * İşlem ID'sine göre kullanıcıya özel dekont PDF'i üretir.
+     * @Transactional(readOnly = true) anotasyonu Lazy Initialization hatalarını önler.
+     */
+    @Transactional(readOnly = true)
     public byte[] generateTransactionReceipt(Long transactionId) {
         Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new ResourceNotFoundException("İşlem kaydı bulunamadı: " + transactionId));
 
-        Document document = new Document(PageSize.A4, 36, 36, 36, 36);
+        // 1. Sistem kaynaklı işlemler (örn: SYSTEM_DEPOSIT) için alıcı IBAN'ı baz al
+        String searchIban = (transaction.getFromIban() != null && transaction.getFromIban().startsWith("SYSTEM"))
+                ? transaction.getToIban()
+                : transaction.getFromIban();
+
+        Wallet wallet = walletRepository.findByIban(searchIban)
+                .orElseThrow(() -> new ResourceNotFoundException("Cüzdan bulunamadı: " + searchIban));
+
+        // 2. Kullanıcının sahip olduğu tüm IBAN'ları lazy relation üzerinden çek
+        List<String> userIbans = wallet.getUser().getWallets().stream()
+                .map(Wallet::getIban)
+                .toList();
+
+        // 3. Kullanıcı bazlı kronolojik sıra numarasını hesapla
+        long sequenceNumber = transactionRepository.countUserTransactionsUntil(
+                userIbans,
+                transaction.getCreatedAt(),
+                transaction.getId()
+        );
+
+        // --- PDF Oluşturma ---
+        Document document = new Document(PageSize.A4, 50, 50, 50, 50);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         try {
             PdfWriter.getInstance(document, out);
             document.open();
 
-            // Başlık
-            Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 20, BaseColor.DARK_GRAY);
-            Paragraph title = new Paragraph("DIGITAL WALLET - TRANSFER DEKONTU", titleFont);
+            // Fontlar
+            Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 22, BaseColor.DARK_GRAY);
+            Font labelFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, BaseColor.GRAY);
+            Font valueFont = FontFactory.getFont(FontFactory.HELVETICA, 12, BaseColor.BLACK);
+            Font successFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, new BaseColor(0, 150, 0));
+
+            // Başlık Alanı
+            Paragraph title = new Paragraph("DIGITAL WALLET", titleFont);
             title.setAlignment(Element.ALIGN_CENTER);
-            title.setSpacingAfter(20);
             document.add(title);
 
-            // Çizgi
-            Paragraph line = new Paragraph("____________________________________________________");
-            line.setSpacingAfter(20);
-            document.add(line);
+            Paragraph subTitle = new Paragraph("TRANSFER DEKONTU", FontFactory.getFont(FontFactory.HELVETICA, 14, BaseColor.GRAY));
+            subTitle.setAlignment(Element.ALIGN_CENTER);
+            subTitle.setSpacingAfter(30);
+            document.add(subTitle);
 
-            // Tablo Oluşturma
+            // Bilgi Tablosu
             PdfPTable table = new PdfPTable(2);
             table.setWidthPercentage(100);
             table.setSpacingBefore(10f);
-            table.setSpacingAfter(10f);
 
-            Font labelFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, BaseColor.BLACK);
-            Font valueFont = FontFactory.getFont(FontFactory.HELVETICA, 12, BaseColor.DARK_GRAY);
+            addTableRow(table, "Islem Sira No:", String.valueOf(sequenceNumber), labelFont, valueFont);            addTableRow(table, "REFERANS KODU", "TX-" + (transaction.getId() + 10000), labelFont, valueFont);
+            addTableRow(table, "ISLEM TIPI", transaction.getTransactionType(), labelFont, valueFont);
+            addTableRow(table, "GONDEREN IBAN", transaction.getFromIban(), labelFont, valueFont);
+            addTableRow(table, "ALICI IBAN", transaction.getToIban(), labelFont, valueFont);
+            addTableRow(table, "TUTAR", transaction.getAmount() + " " + transaction.getCurrency(), labelFont, valueFont);
 
-            addTableRow(table, "Islem No:", String.valueOf(transaction.getId()), labelFont, valueFont);
-            addTableRow(table, "Gonderen IBAN:", transaction.getFromIban(), labelFont, valueFont);
-            addTableRow(table, "Alici IBAN:", transaction.getToIban(), labelFont, valueFont);
-            addTableRow(table, "Tutar:", transaction.getAmount() + " " + transaction.getCurrency(), labelFont, valueFont);
-            addTableRow(table, "Islem Tipi:", transaction.getTransactionType(), labelFont, valueFont);
-            addTableRow(table, "Durum:", transaction.getStatus(), labelFont, valueFont);
-
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
             String formattedDate = transaction.getCreatedAt() != null ? transaction.getCreatedAt().format(formatter) : "-";
-            addTableRow(table, "Tarih:", formattedDate, labelFont, valueFont);
+            addTableRow(table, "TARIH", formattedDate, labelFont, valueFont);
+
+            String statusText = transaction.getStatus() != null ? transaction.getStatus().toUpperCase() : "BASARILI";
+            addTableRow(table, "DURUM", statusText, labelFont, successFont);
 
             document.add(table);
 
             // Alt Bilgi
-            Paragraph footer = new Paragraph("\n\nBu belge Digital Wallet sistemi tarafindan otomatik uretilmistir.",
-                    FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 10, BaseColor.GRAY));
+            Paragraph footer = new Paragraph("\n\nBu belge sistem tarafından otomatik üretilmiştir.",
+                    FontFactory.getFont(FontFactory.HELVETICA, 8, BaseColor.LIGHT_GRAY));
             footer.setAlignment(Element.ALIGN_CENTER);
             document.add(footer);
 
             document.close();
         } catch (DocumentException e) {
-            throw new RuntimeException("PDF olusturulurken hata meydana geldi", e);
+            throw new RuntimeException("PDF oluşturma hatası: " + e.getMessage(), e);
         }
 
         return out.toByteArray();
@@ -80,12 +113,15 @@ public class PdfService {
 
     private void addTableRow(PdfPTable table, String label, String value, Font labelFont, Font valueFont) {
         PdfPCell cell1 = new PdfPCell(new Phrase(label, labelFont));
-        cell1.setPadding(8);
-        cell1.setBorder(Rectangle.NO_BORDER);
+        cell1.setBorder(Rectangle.BOTTOM);
+        cell1.setPadding(10);
+        cell1.setBorderColor(BaseColor.LIGHT_GRAY);
 
         PdfPCell cell2 = new PdfPCell(new Phrase(value != null ? value : "-", valueFont));
-        cell2.setPadding(8);
-        cell2.setBorder(Rectangle.NO_BORDER);
+        cell2.setBorder(Rectangle.BOTTOM);
+        cell2.setPadding(10);
+        cell2.setBorderColor(BaseColor.LIGHT_GRAY);
+        cell2.setHorizontalAlignment(Element.ALIGN_RIGHT);
 
         table.addCell(cell1);
         table.addCell(cell2);
