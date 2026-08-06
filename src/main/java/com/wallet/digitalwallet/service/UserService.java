@@ -1,12 +1,10 @@
 package com.wallet.digitalwallet.service;
 
-import com.wallet.digitalwallet.dto.AuthResponse;
-import com.wallet.digitalwallet.dto.LoginRequest;
-import com.wallet.digitalwallet.dto.UserRegisterRequest;
-import com.wallet.digitalwallet.dto.UserResponse;
+import com.wallet.digitalwallet.dto.*;
 import com.wallet.digitalwallet.entity.User;
 import com.wallet.digitalwallet.entity.Wallet;
 import com.wallet.digitalwallet.exception.BusinessException;
+import com.wallet.digitalwallet.exception.ResourceNotFoundException;
 import com.wallet.digitalwallet.repository.UserRepository;
 import com.wallet.digitalwallet.repository.WalletRepository;
 import com.wallet.digitalwallet.security.JwtService;
@@ -16,7 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.Random;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -28,40 +26,35 @@ public class UserService {
     private final JwtService jwtService;
 
     @Transactional
-    public UserResponse registerUser(UserRegisterRequest request) {
+    public AuthResponse registerUser(UserRegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BusinessException("Bu e-posta adresi zaten kullanımda: " + request.getEmail());
         }
 
-        // Şifreyi BCrypt ile güvenli şekilde şifreliyoruz
         User user = User.builder()
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
+                .role("ROLE_USER")
                 .build();
 
         User savedUser = userRepository.save(user);
 
+        // Otomatik Cüzdan Oluşturma
         Wallet defaultWallet = Wallet.builder()
                 .iban(generateRandomIban())
                 .currency("TRY")
-                .balance(BigDecimal.valueOf(1000.00))
+                .balance(new BigDecimal("1000.00"))
                 .user(savedUser)
                 .build();
 
         walletRepository.save(defaultWallet);
 
-        return UserResponse.builder()
-                .id(savedUser.getId())
-                .firstName(savedUser.getFirstName())
-                .lastName(savedUser.getLastName())
-                .email(savedUser.getEmail())
-                .createdAt(savedUser.getCreatedAt())
-                .build();
+        String token = jwtService.generateToken(savedUser.getEmail());
+        return new AuthResponse(token, savedUser.getEmail());
     }
 
-    // Kullanıcı Giriş Mantığı
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new BusinessException("E-posta veya şifre hatalı."));
@@ -74,12 +67,73 @@ public class UserService {
         return new AuthResponse(token, user.getEmail());
     }
 
-    private String generateRandomIban() {
-        Random random = new Random();
-        StringBuilder iban = new StringBuilder("TR");
-        for (int i = 0; i < 22; i++) {
-            iban.append(random.nextInt(10));
+    @Transactional
+    public void updatePassword(String email, PasswordUpdateRequest request) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı"));
+
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+            throw new BusinessException("Mevcut şifreniz hatalı!");
         }
-        return iban.toString();
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+    }
+
+    @Transactional(readOnly = true)
+    public UserProfileResponse getUserProfile(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı"));
+
+        return UserProfileResponse.builder()
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail())
+                .createdAt(user.getCreatedAt())
+                .totalWallets(user.getWallets() != null ? user.getWallets().size() : 0)
+                .build();
+    }
+
+    @Transactional
+    public void updateProfile(String email, ProfileUpdateRequest request) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı"));
+
+        user.setFirstName(request.getFirstName());
+        user.setLastName(request.getLastName());
+        userRepository.save(user);
+    }
+
+    /**
+     * Kullanıcı E-Posta Güncelleme (Şifre Doğrulamalı)
+     */
+    @Transactional
+    public AuthResponse updateEmail(String currentEmail, EmailUpdateRequest request) {
+        // 1. Kullanıcıyı bul
+        User user = userRepository.findByEmail(currentEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı"));
+
+        // 2. Şifreyi doğrula (Güvenlik Katmanı)
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new BusinessException("Mevcut şifreniz hatalı! Email değiştirilemedi.");
+        }
+
+        // 3. Yeni email kullanımda mı kontrol et
+        if (userRepository.existsByEmail(request.getNewEmail())) {
+            throw new BusinessException("Bu e-posta adresi zaten başka bir hesap tarafından kullanılıyor.");
+        }
+
+        // 4. Güncelleme ve kaydet
+        user.setEmail(request.getNewEmail());
+        userRepository.save(user);
+
+        // 5. Yeni email ile taze Token üretimi
+        String token = jwtService.generateToken(user.getEmail());
+        return new AuthResponse(token, user.getEmail());
+    }
+
+    private String generateRandomIban() {
+        return "TR" + String.format("%022d",
+                Math.abs(UUID.randomUUID().getLeastSignificantBits() % 1000000000000000000L));
     }
 }

@@ -5,6 +5,7 @@ import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class TransactionSpecification {
 
@@ -14,6 +15,16 @@ public class TransactionSpecification {
             return cb.or(
                     cb.equal(root.get("fromIban"), iban),
                     cb.equal(root.get("toIban"), iban)
+            );
+        };
+    }
+
+    public static Specification<Transaction> hasAnyIbans(List<String> ibans) {
+        return (root, query, cb) -> {
+            if (ibans == null || ibans.isEmpty()) return cb.disjunction();
+            return cb.or(
+                    root.get("fromIban").in(ibans),
+                    root.get("toIban").in(ibans)
             );
         };
     }

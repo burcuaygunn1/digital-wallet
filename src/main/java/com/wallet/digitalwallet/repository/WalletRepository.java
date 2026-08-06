@@ -13,10 +13,20 @@ import java.util.Optional;
 
 @Repository
 public interface WalletRepository extends JpaRepository<Wallet, Long> {
+
     Optional<Wallet> findByIban(String iban);
+
     List<Wallet> findByUserId(Long userId);
+
     boolean existsByIban(String iban);
-    // YENİ: Para transferi sırasında race condition'ı önlemek için cüzdanı veritabanı seviyesinde kilitler
+
+    /**
+     * Kullanıcının e-posta adresi üzerinden cüzdanlarını getiren özel sorgu.
+     * Spring Data JPA "UserEmail" kısmını otomatik olarak "user.email" ile eşleştirir.
+     */
+    List<Wallet> findByUserEmail(String email);
+
+    // Para transferi sırasında race condition'ı önlemek için cüzdanı veritabanı seviyesinde kilitler
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT w FROM Wallet w WHERE w.iban = :iban")
     Optional<Wallet> findByIbanWithLock(@Param("iban") String iban);

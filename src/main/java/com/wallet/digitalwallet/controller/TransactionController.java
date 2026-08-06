@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.security.Principal;
 import java.time.LocalDateTime;
 
 @RestController
@@ -25,7 +26,29 @@ public class TransactionController {
     private final PdfService pdfService;
     private final TransactionService transactionService;
 
-    // 1. Dekont İndirme Endpoint'i (Önceki Adımdan)
+    /**
+     * Oturum açmış kullanıcının kendi işlemlerini getirir.
+     * İster sade (filtresiz) ister query param ile filtreli olarak çağrılabilir.
+     */
+    @GetMapping("/my")
+    public ResponseEntity<Page<Transaction>> getMyTransactions(
+            Principal principal,
+            @RequestParam(required = false) BigDecimal minAmount,
+            @RequestParam(required = false) BigDecimal maxAmount,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        // Parametreler gönderilmezse (null ise) varsayılan olarak tüm işlemleri getirir
+        Page<Transaction> transactions = transactionService.getMyFilteredTransactions(
+                principal.getName(), minAmount, maxAmount, startDate, endDate, pageable
+        );
+        return ResponseEntity.ok(transactions);
+    }
+
+    /**
+     * Dekont İndirme Endpoint'i
+     */
     @GetMapping("/{id}/pdf")
     public ResponseEntity<byte[]> downloadReceipt(@PathVariable Long id) {
         byte[] pdfBytes = pdfService.generateTransactionReceipt(id);
@@ -39,7 +62,9 @@ public class TransactionController {
                 .body(pdfBytes);
     }
 
-    // 2. Sayfalamalı ve Dinamik Filtreli İşlem Geçmişi Arama Endpoint'i (Yeni)
+    /**
+     * Admin veya Genel Arama Endpoint'i (İsteğe bağlı IBAN veya tutar/tarih ile arama)
+     */
     @GetMapping("/search")
     public ResponseEntity<Page<Transaction>> searchTransactions(
             @RequestParam(required = false) String iban,

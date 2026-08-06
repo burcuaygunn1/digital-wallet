@@ -1,29 +1,29 @@
 package com.wallet.digitalwallet.security;
 
-import com.wallet.digitalwallet.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
-    private final UserRepository userRepository;
+    private final UserDetailsService userDetailsService;
 
     @Override
     protected void doFilterInternal(
@@ -33,48 +33,51 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
 
         final String authHeader = request.getHeader("Authorization");
-        final String jwt;
-        final String userEmail;
 
-        // Başlık yoksa veya "Bearer " ile başlamıyorsa zincire devam et
+        // Header boşsa veya Bearer ile başlamıyorsa zinciri devam ettir ve çık
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        jwt = authHeader.substring(7);
+        final String jwt = authHeader.substring(7);
 
         try {
-            userEmail = jwtService.extractUsername(jwt);
+            final String userEmail = jwtService.extractUsername(jwt);
 
             if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                var userOptional = userRepository.findByEmail(userEmail);
+                UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
 
-                if (userOptional.isPresent()) {
-                    // Kullanıcı veritabanında var, token geçerli mi kontrol et
-                    if (jwtService.isTokenValid(jwt, userEmail)) {
-                        UserDetails userDetails = new User(userEmail, "", Collections.emptyList());
+                if (jwtService.isTokenValid(jwt, userDetails.getUsername())) {
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities()
+                    );
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
-                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-                        // Kullanıcıyı Spring Security Oturumuna (Context) Yerleştir
-                        SecurityContextHolder.getContext().setAuthentication(authToken);
-                    } else {
-                        System.err.println("JWT Hatasi: Token gecerli degil (isTokenValid false dondu).");
-                    }
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
                 } else {
-                    System.err.println("JWT Hatasi: Token icindeki e-posta veritabaninda bulunamadi -> " + userEmail);
+                    log.warn("JWT Doğrulama Başarısız: Token geçersiz. User: {}", userEmail);
                 }
             }
         } catch (Exception e) {
-            System.err.println("JWT Dogrulama Istisnasi: " + e.getMessage());
+            log.error("JWT İşleme Hatası: {}", e.getMessage());
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        String path = request.getRequestURI();
+
+        // SADECE login ve register endpoint'leri filteden muaf olmalı.
+        // /api/v1/users/me/profile vb. istekler artık bu filtreye girecek ve JWT başarıyla okunacak!
+        return "OPTIONS".equalsIgnoreCase(request.getMethod()) ||
+                path.equals("/api/v1/users/login") ||
+                path.equals("/api/v1/users/register") ||
+                path.contains("/swagger") ||
+                path.contains("/v3/api-docs");
     }
 }

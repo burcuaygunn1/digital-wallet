@@ -1,93 +1,368 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Digital Wallet Dashboard</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .dot {
+            transition: transform 0.2s ease-in-out;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 font-sans min-h-screen">
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-full transition-colors duration-200">
 
-<!-- Giriş & Kayıt Ekranı -->
-<div id="authSection" class="flex justify-center items-center min-h-screen">
-    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
-        <h2 class="text-2xl font-bold text-center text-indigo-600 mb-6">Dijital Cüzdan Girişi</h2>
+<!-- Auth Section (Giriş / Kayıt) -->
+<div id="authSection" class="flex min-h-screen items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100 dark:border-gray-700">
+        <!-- Logo / Başlık -->
+        <div class="text-center mb-6">
+            <i class="fa-solid fa-wallet text-indigo-600 dark:text-indigo-400 text-4xl mb-2"></i>
+            <h1 class="text-2xl font-bold text-gray-800 dark:text-white">Dijital Cüzdan</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Hesabınıza giriş yapın veya yeni kayıt oluşturun</p>
+        </div>
+
+        <!-- Sekme Butonları (Login / Register) -->
+        <div class="flex border-b border-gray-200 dark:border-gray-700 mb-6">
+            <button id="tabLoginBtn" class="w-1/2 py-2 text-center font-bold border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400">Giriş Yap</button>
+            <button id="tabRegisterBtn" class="w-1/2 py-2 text-center font-bold text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400">Kayıt Ol</button>
+        </div>
+
         <div id="authAlert" class="hidden mb-4 p-3 text-sm rounded-lg"></div>
+
+        <!-- Giriş Formu -->
         <form id="loginForm" class="space-y-4">
             <div>
-                <label class="block text-sm font-medium text-gray-700">E-Posta</label>
-                <input type="email" id="loginEmail" required class="mt-1 w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">E-Posta</label>
+                <input type="email" id="loginEmail" required class="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700">Şifre</label>
-                <input type="password" id="loginPassword" required class="mt-1 w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Şifre</label>
+                <input type="password" id="loginPassword" required class="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
             </div>
-            <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-md hover:bg-indigo-700 transition">Giriş Yap</button>
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition">Giriş Yap</button>
+        </form>
+
+        <!-- Kayıt Formu -->
+        <form id="registerForm" class="space-y-4 hidden">
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Ad</label>
+                    <input type="text" id="regFirstName" required class="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Soyad</label>
+                    <input type="text" id="regLastName" required class="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-indigo-500 focus:outline-none">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">E-Posta</label>
+                <input type="email" id="regEmail" required class="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-indigo-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Şifre</label>
+                <input type="password" id="regPassword" required class="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-indigo-500 focus:outline-none">
+            </div>
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition">Kayıt Ol</button>
         </form>
     </div>
 </div>
 
-<!-- Ana Panel / Cüzdan Ekranı (Varsayılan Gizli) -->
-<div id="dashboardSection" class="hidden min-h-screen p-6">
-    <!-- Üst Bar -->
-    <header class="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm mb-6">
-        <h1 class="text-xl font-bold text-gray-800"><i class="fa-solid font-wallet text-indigo-600"></i> Dijital Cüzdanım</h1>
-        <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition text-sm">Çıkış Yap</button>
+<!-- Dashboard Section -->
+<div id="dashboardSection" class="hidden min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10 transition-colors duration-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-wallet text-indigo-600 dark:text-indigo-400 text-2xl"></i>
+                <span class="text-xl font-bold text-gray-800 dark:text-white">Dijital Cüzdan</span>
+            </div>
+
+            <div class="flex items-center space-x-4">
+                <!-- Dark Mode Toggle Switch -->
+                <button id="darkModeToggle" class="w-12 h-6 bg-gray-300 dark:bg-indigo-600 rounded-full p-1 flex items-center transition duration-300 focus:outline-none">
+                    <div class="dot w-4 h-4 bg-white rounded-full shadow-md transform dark:translate-x-6 transition duration-300"></div>
+                </button>
+
+                <!-- Kullanıcı Adı Gösterimi -->
+                <span id="headerUserName" class="font-medium text-gray-700 dark:text-gray-200 hidden sm:inline-block">Kullanıcı</span>
+
+                <button id="settingsBtn" class="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                    <i class="fa-solid fa-gear text-lg"></i>
+                </button>
+                <button id="logoutBtn" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition">
+                    <i class="fa-solid fa-right-from-bracket text-lg"></i>
+                </button>
+            </div>
+        </div>
     </header>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Cüzdan Kartı -->
-        <div class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-6 rounded-2xl shadow-lg">
-            <p class="text-sm opacity-80">Toplam Bakiye</p>
-            <h3 id="walletBalance" class="text-3xl font-bold my-2">0.00 TL</h3>
-            <p class="text-xs opacity-75 mt-4">IBAN Numarası:</p>
-            <p id="walletIban" class="font-mono text-sm tracking-wider font-semibold">TR00 0000 0000 0000 0000 0000 00</p>
+    <!-- Ana İçerik -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        <!-- Kartlar Izgarası -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+            <!-- Çoklu Cüzdan Kartı Alanı -->
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-gray-800 dark:text-white">Cüzdanlarım</h3>
+                    <select id="walletSelector" onchange="onWalletChange()" class="p-2 text-sm border rounded-lg dark:bg-gray-700 dark:text-white dark:border-gray-600 outline-none">
+                        <!-- Cüzdanlar JS ile dinamik dolacak -->
+                    </select>
+                </div>
+
+                <div id="activeWalletCard" class="bg-gradient-to-r from-indigo-600 to-purple-700 text-white p-6 rounded-2xl shadow-xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p id="activeCurrency" class="text-xs text-indigo-200 uppercase font-bold tracking-wider">Aktif Bakiye</p>
+                                <h3 id="walletBalance" class="text-3xl font-extrabold my-2">0.00</h3>
+                            </div>
+                            <i class="fa-solid fa-credit-card text-2xl text-indigo-200/50"></i>
+                        </div>
+                        <p id="walletIban" class="font-mono text-xs mt-2 text-indigo-100 tracking-tighter">TR00...</p>
+                    </div>
+
+                    <div class="mt-6 grid grid-cols-3 gap-2">
+                        <button onclick="openDepositModal()" class="bg-white/20 hover:bg-white/30 py-2 px-1 rounded-lg text-xs font-semibold transition text-center">
+                            <i class="fa-solid fa-plus mr-1"></i> Bakiye
+                        </button>
+                        <button onclick="openExchangeModal()" class="bg-white/20 hover:bg-white/30 py-2 px-1 rounded-lg text-xs font-semibold transition text-center">
+                            <i class="fa-solid fa-right-left mr-1"></i> Dönüştür
+                        </button>
+                        <button onclick="openCreateWalletModal()" class="bg-white/20 hover:bg-white/30 py-2 px-1 rounded-lg text-xs font-semibold transition text-center">
+                            <i class="fa-solid fa-wallet mr-1"></i> Yeni
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hızlı Transfer Formu -->
+            <div class="md:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-md border border-gray-100 dark:border-gray-700">
+                <h2 class="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center">
+                    <i class="fa-solid fa-paper-plane mr-2 text-indigo-600 dark:text-indigo-400"></i> Para Transferi
+                </h2>
+                <div id="transferAlert" class="hidden mb-4 p-3 text-sm rounded-lg"></div>
+                <form id="transferForm" class="space-y-4">
+                    <input type="hidden" id="fromIban">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Alıcı IBAN</label>
+                            <input type="text" id="toIban" required placeholder="TR000000000000000000000000" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 font-mono text-sm focus:border-indigo-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Miktar</label>
+                            <input type="number" id="transferAmount" step="0.01" min="1" required placeholder="0.00" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-indigo-500 focus:outline-none">
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-lg shadow transition">Transferi Tamamla</button>
+                </form>
+            </div>
         </div>
 
-        <!-- Para Transfer Formu -->
-        <div class="md:col-span-2 bg-white p-6 rounded-2xl shadow-sm">
-            <h3 class="text-lg font-bold text-gray-800 mb-4"><i class="fa-solid fa-paper-plane text-indigo-600"></i> Para Transferi Yap</h3>
-            <div id="transferAlert" class="hidden mb-4 p-3 text-sm rounded-lg"></div>
-            <form id="transferForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Gönderen IBAN</label>
-                    <input type="text" id="fromIban" readonly class="mt-1 w-full p-2 bg-gray-100 border border-gray-300 rounded-md font-mono text-sm">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Alıcı IBAN</label>
-                    <input type="text" id="toIban" placeholder="TR..." required class="mt-1 w-full p-2 border border-gray-300 rounded-md font-mono text-sm">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Tutar</label>
-                    <input type="number" id="transferAmount" step="0.01" required class="mt-1 w-full p-2 border border-gray-300 rounded-md">
-                </div>
-                <div class="flex items-end">
-                    <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-md hover:bg-indigo-700 transition">Transferi Tamamla</button>
-                </div>
-            </form>
+        <!-- Son İşlemler Tablosu -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div class="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                <h2 class="text-lg font-bold text-gray-800 dark:text-white flex items-center">
+                    <i class="fa-solid fa-list-check mr-2 text-indigo-600 dark:text-indigo-400"></i> Son İşlemler
+                </h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                    <tr class="bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">
+                        <th class="p-4">Tarih</th>
+                        <th class="p-4">Gönderen IBAN</th>
+                        <th class="p-4">Alıcı IBAN</th>
+                        <th class="p-4">Tutar</th>
+                        <th class="p-4">İşlem</th>
+                    </tr>
+                    </thead>
+                    <tbody id="transactionTableBody" class="divide-y divide-gray-100 dark:divide-gray-700 text-sm text-gray-700 dark:text-gray-200">
+                    <!-- JS tarafında dinamik yüklenir -->
+                    </tbody>
+                </table>
+            </div>
         </div>
+    </main>
+</div>
+
+<!-- Bakiye Yükleme Modalı -->
+<div id="depositModal" class="hidden fixed inset-0 bg-black/50 dark:bg-opacity-70 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-100 dark:border-gray-700">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold text-gray-800 dark:text-white">Bakiye Yükle</h3>
+            <button onclick="closeModal('depositModal')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
+        <div id="depositAlert" class="hidden mb-4 p-3 text-sm rounded-lg"></div>
+        <form id="depositForm" class="space-y-4">
+            <input type="hidden" id="depositIban">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Yüklenecek Tutar</label>
+                <input type="number" id="depositAmount" step="0.01" min="1" required placeholder="0.00" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-indigo-500 focus:outline-none">
+            </div>
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow transition">Yükle</button>
+        </form>
     </div>
+</div>
 
-    <!-- İşlem Geçmişi Tablosu -->
-    <div class="bg-white mt-6 p-6 rounded-2xl shadow-sm">
-        <h3 class="text-lg font-bold text-gray-800 mb-4"><i class="fa-solid fa-list text-indigo-600"></i> Son İşlemler</h3>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm text-gray-600">
-                <thead class="bg-gray-50 text-gray-700 uppercase text-xs">
-                <tr>
-                    <th class="p-3">Tarih</th>
-                    <th class="p-3">Gönderen IBAN</th>
-                    <th class="p-3">Alıcı IBAN</th>
-                    <th class="p-3">Tutar</th>
-                    <th class="p-3">İşlem</th>
-                </tr>
-                </thead>
-                <tbody id="transactionTableBody">
-                <!-- JavaScript ile dinamik dolacak -->
-                </tbody>
-            </table>
+<!-- Döviz Dönüşüm Modalı -->
+<div id="exchangeModal" class="hidden fixed inset-0 bg-black/50 dark:bg-opacity-70 z-50 flex justify-center items-center p-4">
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-2xl w-full max-w-md border border-gray-100 dark:border-gray-700">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-bold dark:text-white">Döviz Dönüştür (Al/Sat)</h3>
+            <button onclick="closeModal('exchangeModal')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
+        <form id="exchangeForm" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase">HANGİ CÜZDANDAN?</label>
+                <select id="exchangeFrom" class="w-full p-3 border rounded-xl dark:bg-gray-700 dark:text-white dark:border-gray-600 outline-none"></select>
+            </div>
+            <div class="flex justify-center"><i class="fa-solid fa-arrow-down text-indigo-600 dark:text-indigo-400 text-lg"></i></div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase">HANGİ CÜZDANA?</label>
+                <select id="exchangeTo" class="w-full p-3 border rounded-xl dark:bg-gray-700 dark:text-white dark:border-gray-600 outline-none"></select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase">SATILACAK TUTAR</label>
+                <input type="number" id="exchangeAmount" step="0.01" min="0.01" required placeholder="0.00" class="w-full p-3 border rounded-xl dark:bg-gray-700 dark:text-white dark:border-gray-600 outline-none">
+            </div>
+            <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 shadow transition">Dönüştür</button>
+            <button type="button" onclick="closeModal('exchangeModal')" class="w-full text-gray-500 text-sm mt-2 hover:underline">Vazgeç</button>
+        </form>
+    </div>
+</div>
+
+<!-- Yeni Cüzdan Oluşturma Modalı -->
+<div id="createWalletModal" class="hidden fixed inset-0 bg-black/50 dark:bg-opacity-70 z-50 flex justify-center items-center p-4">
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-2xl w-full max-w-md border border-gray-100 dark:border-gray-700">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-bold dark:text-white">Yeni Cüzdan Aç</h3>
+            <button onclick="closeModal('createWalletModal')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
+        <form id="createWalletForm" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Para Birimi</label>
+                <select id="newWalletCurrency" class="w-full p-3 border rounded-xl dark:bg-gray-700 dark:text-white dark:border-gray-600 outline-none">
+                    <option value="TRY">TRY - Türk Lirası</option>
+                    <option value="USD">USD - Amerikan Doları</option>
+                    <option value="EUR">EUR - Euro</option>
+                </select>
+            </div>
+            <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 shadow transition">Cüzdanı Oluştur</button>
+        </form>
+    </div>
+</div>
+
+<!-- Ayarlar Modalı (Sekmeli) -->
+<div id="settingsModal" class="hidden fixed inset-0 bg-black/50 dark:bg-opacity-70 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col md:flex-row border border-gray-100 dark:border-gray-700 max-h-[90vh]">
+        <!-- Modal Sol Menü / Sekmeler -->
+        <div class="w-full md:w-1/3 bg-gray-50 dark:bg-gray-800/50 p-4 border-r border-gray-100 dark:border-gray-700 space-y-2">
+            <h3 class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase px-3 mb-2">Ayarlar</h3>
+            <button data-tab="tabProfile" class="tab-btn w-full flex items-center space-x-3 p-3 rounded-lg bg-indigo-600 text-white shadow-md transition">
+                <i class="fa-solid fa-user"></i>
+                <span class="font-medium text-sm">Profil Bilgileri</span>
+            </button>
+            <button data-tab="tabEmail" class="tab-btn w-full flex items-center space-x-3 p-3 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                <i class="fa-solid fa-envelope"></i>
+                <span class="font-medium text-sm">E-Posta Güncelle</span>
+            </button>
+            <button data-tab="tabPassword" class="tab-btn w-full flex items-center space-x-3 p-3 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                <i class="fa-solid fa-key"></i>
+                <span class="font-medium text-sm">Şifre Değiştir</span>
+            </button>
+            <button data-tab="tabStats" class="tab-btn w-full flex items-center space-x-3 p-3 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span class="font-medium text-sm">Hesap Özeti</span>
+            </button>
+        </div>
+
+        <!-- Modal Sağ İçerik Alanı -->
+        <div class="w-full md:w-2/3 p-6 relative overflow-y-auto">
+            <button id="closeSettingsBtn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <div id="settingsAlert" class="hidden mb-4 p-3 text-sm rounded-lg"></div>
+
+            <!-- Sekme 1: Profil Güncelleme -->
+            <div id="tabProfile" class="settings-content space-y-4">
+                <h4 class="text-lg font-bold text-gray-800 dark:text-white border-b border-gray-100 dark:border-gray-700 pb-2">Profil Bilgileri</h4>
+                <form id="updateProfileForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Ad</label>
+                        <input type="text" id="profFirstName" required class="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-indigo-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Soyad</label>
+                        <input type="text" id="profLastName" required class="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-indigo-500 focus:outline-none">
+                    </div>
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow transition">Ad / Soyad Güncelle</button>
+                </form>
+            </div>
+
+            <!-- Sekme 2: E-Posta Güncelleme (Şifre Doğrulamalı) -->
+            <div id="tabEmail" class="settings-content hidden space-y-4">
+                <h4 class="text-lg font-bold text-gray-800 dark:text-white border-b border-gray-100 dark:border-gray-700 pb-2">E-Posta Güncelle</h4>
+                <form id="updateEmailForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Yeni E-Posta Adresi</label>
+                        <input type="email" id="profEmail" required class="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-indigo-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Doğrulama İçin Mevcut Şifre</label>
+                        <input type="password" id="currentPasswordForEmail" required class="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-indigo-500 focus:outline-none">
+                    </div>
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow transition">E-Posta Güncelle</button>
+                </form>
+            </div>
+
+            <!-- Sekme 3: Şifre Değiştirme -->
+            <div id="tabPassword" class="settings-content hidden space-y-4">
+                <h4 class="text-lg font-bold text-gray-800 dark:text-white border-b border-gray-100 dark:border-gray-700 pb-2">Şifre Değiştir</h4>
+                <form id="updatePasswordForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Mevcut Şifre</label>
+                        <input type="password" id="oldPassword" required class="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-indigo-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Yeni Şifre</label>
+                        <input type="password" id="newPassword" required class="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:border-indigo-500 focus:outline-none">
+                    </div>
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow transition">Şifreyi Güncelle</button>
+                </form>
+            </div>
+
+            <!-- Sekme 4: Hesap Özeti -->
+            <div id="tabStats" class="settings-content hidden space-y-4">
+                <h4 class="text-lg font-bold text-gray-800 dark:text-white border-b border-gray-100 dark:border-gray-700 pb-2">Hesap İstatistikleri</h4>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-xl border border-gray-100 dark:border-gray-700">
+                        <span class="text-xs text-gray-400 dark:text-gray-400 block">Kayıt Tarihi</span>
+                        <span id="statJoinDate" class="text-base font-bold text-gray-800 dark:text-white">-</span>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-xl border border-gray-100 dark:border-gray-700">
+                        <span class="text-xs text-gray-400 dark:text-gray-400 block">Cüzdan Sayısı</span>
+                        <span id="statWalletCount" class="text-base font-bold text-gray-800 dark:text-white">1</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
