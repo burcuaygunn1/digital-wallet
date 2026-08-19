@@ -18,18 +18,15 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        // İsteği atan kullanıcının IP adresini al
         String clientIp = getClientIP(request);
 
         Bucket bucket = rateLimitingService.resolveBucket(clientIp);
         ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
 
         if (probe.isConsumed()) {
-            // İsteğe izin ver ve kalan hakkı Response Header olarak ekle
             response.addHeader("X-Rate-Limit-Remaining", String.valueOf(probe.getRemainingTokens()));
             return true;
         } else {
-            // Sınır aşıldı! 429 Too Many Requests dön
             long waitForRefillSeconds = probe.getNanosToWaitForRefill() / 1_000_000_000;
             response.addHeader("X-Rate-Limit-Retry-After-Seconds", String.valueOf(waitForRefillSeconds));
             response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());

@@ -16,12 +16,8 @@ import java.util.function.Function;
 
 @Service
 public class JwtService {
-
-    // 256-bit Güvenli Gizli Anahtar (Secret Key)
     @Value("${jwt.secret:404E635266556A586E3272357538782F413F4428472B4B6250655368566D5971}")
     private String secretKey;
-
-    // Token Geçerlilik Süresi (24 Saat = 86,400,000 ms)
     @Value("${jwt.expiration:86400000}")
     private long jwtExpiration;
 

@@ -24,50 +24,35 @@ public class PdfService {
     private final TransactionRepository transactionRepository;
     private final WalletRepository walletRepository;
 
-    /**
-     * İşlem ID'sine göre kullanıcıya özel dekont PDF'i üretir.
-     * @Transactional(readOnly = true) anotasyonu Lazy Initialization hatalarını önler.
-     */
+    
     @Transactional(readOnly = true)
     public byte[] generateTransactionReceipt(Long transactionId) {
         Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new ResourceNotFoundException("İşlem kaydı bulunamadı: " + transactionId));
-
-        // 1. Sistem kaynaklı işlemler (örn: SYSTEM_DEPOSIT) için alıcı IBAN'ı baz al
         String searchIban = (transaction.getFromIban() != null && transaction.getFromIban().startsWith("SYSTEM"))
                 ? transaction.getToIban()
                 : transaction.getFromIban();
 
         Wallet wallet = walletRepository.findByIban(searchIban)
                 .orElseThrow(() -> new ResourceNotFoundException("Cüzdan bulunamadı: " + searchIban));
-
-        // 2. Kullanıcının sahip olduğu tüm IBAN'ları lazy relation üzerinden çek
         List<String> userIbans = wallet.getUser().getWallets().stream()
                 .map(Wallet::getIban)
                 .toList();
-
-        // 3. Kullanıcı bazlı kronolojik sıra numarasını hesapla
         long sequenceNumber = transactionRepository.countUserTransactionsUntil(
                 userIbans,
                 transaction.getCreatedAt(),
                 transaction.getId()
         );
-
-        // --- PDF Oluşturma ---
         Document document = new Document(PageSize.A4, 50, 50, 50, 50);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         try {
             PdfWriter.getInstance(document, out);
             document.open();
-
-            // Fontlar
             Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 22, BaseColor.DARK_GRAY);
             Font labelFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, BaseColor.GRAY);
             Font valueFont = FontFactory.getFont(FontFactory.HELVETICA, 12, BaseColor.BLACK);
             Font successFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, new BaseColor(0, 150, 0));
-
-            // Başlık Alanı
             Paragraph title = new Paragraph("DIGITAL WALLET", titleFont);
             title.setAlignment(Element.ALIGN_CENTER);
             document.add(title);
@@ -76,8 +61,6 @@ public class PdfService {
             subTitle.setAlignment(Element.ALIGN_CENTER);
             subTitle.setSpacingAfter(30);
             document.add(subTitle);
-
-            // Bilgi Tablosu
             PdfPTable table = new PdfPTable(2);
             table.setWidthPercentage(100);
             table.setSpacingBefore(10f);
@@ -96,8 +79,6 @@ public class PdfService {
             addTableRow(table, "DURUM", statusText, labelFont, successFont);
 
             document.add(table);
-
-            // Alt Bilgi
             Paragraph footer = new Paragraph("\n\nBu belge sistem tarafından otomatik üretilmiştir.",
                     FontFactory.getFont(FontFactory.HELVETICA, 8, BaseColor.LIGHT_GRAY));
             footer.setAlignment(Element.ALIGN_CENTER);

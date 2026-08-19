@@ -36,8 +36,6 @@ public class Transaction extends BaseEntity {
 
     @Column(nullable = false)
     private String status;
-
-    // Kısıtlamaya takılmamak için varsayılan zaman ataması
     @Builder.Default
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();

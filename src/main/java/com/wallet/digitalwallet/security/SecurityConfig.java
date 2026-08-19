@@ -28,31 +28,17 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // 1. CSRF REST API mimarisinde kapalı olmalıdır
                 .csrf(AbstractHttpConfigurer::disable)
-
-                // 2. CORS ayarları
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
-                // 3. İzinler ve Yetkilendirme Sıralaması
                 .authorizeHttpRequests(auth -> auth
-                        // Pre-flight (OPTIONS) isteklerine CORS için izin ver
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
-                        // 1. Herkese açık endpoint'ler (Public)
                         .requestMatchers("/api/v1/users/login", "/api/v1/users/register").permitAll()
                         .requestMatchers("/", "/index.html", "/app.js", "/*.css", "/*.js", "/favicon.ico", "/static/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
-
-                        // 2. Kullanıcı profil ve şifre güncellemeleri (Korumalı)
                         .requestMatchers("/api/v1/users/me/**").authenticated()
                         .requestMatchers("/api/v1/users/update-password").authenticated()
-
-                        // 3. Diğer tüm cüzdan ve transfer API istekleri kimlik doğrulaması gerektirir
                         .anyRequest().authenticated()
                 )
-
-                // 4. Stateless Session (JWT)
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )

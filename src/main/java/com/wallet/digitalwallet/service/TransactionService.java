@@ -26,17 +26,12 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
 
-    /**
-     * 1. Kullanıcının tüm işlemlerini filtresiz getirir.
-     * Controller katmanındaki basit getMyTransactions(principal.getName(), pageable) çağrıları ile tam uyumludur.
-     */
+    
     public Page<Transaction> getMyTransactions(String email, Pageable pageable) {
         return getMyFilteredTransactions(email, null, null, null, null, pageable);
     }
 
-    /**
-     * 2. Kullanıcının kendi işlemlerini tutar ve tarih filtreleriyle birlikte getirir.
-     */
+    
     public Page<Transaction> getMyFilteredTransactions(
             String email,
             BigDecimal minAmount,
@@ -45,7 +40,6 @@ public class TransactionService {
             LocalDateTime endDate,
             Pageable pageable
     ) {
-        // N+1 problemini ve LazyInitializationException'ı önlemek için fetch join kullanılır
         User user = userRepository.findByEmailWithWallets(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı: " + email));
 
@@ -62,9 +56,7 @@ public class TransactionService {
         return transactionRepository.findAll(spec, pageable);
     }
 
-    /**
-     * 3. Genel arama / Admin kullanımı için spesifik IBAN bazlı filtreleme (6 parametreli eski metot).
-     */
+    
     public Page<Transaction> getFilteredTransactions(
             String iban,
             BigDecimal minAmount,
