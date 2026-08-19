@@ -52,7 +52,6 @@ class WalletServiceTest {
     @Test
     @DisplayName("Başarılı Para Transferi Senaryosu")
     void transfer_SuccessfulTransfer() {
-        // Arrange (Hazırlık)
         TransferRequest request = new TransferRequest();
         request.setFromIban("TR111");
         request.setToIban("TR222");
@@ -62,12 +61,7 @@ class WalletServiceTest {
         when(walletRepository.findByIbanWithLock("TR222")).thenReturn(Optional.of(receiverWallet));
         when(exchangeRateService.getExchangeRate("TRY", "TRY")).thenReturn(BigDecimal.ONE);
         when(exchangeRateService.convert(new BigDecimal("100.00"), BigDecimal.ONE)).thenReturn(new BigDecimal("100.00"));
-
-        // Act (Eylem)
-        // Eğer WalletService içinde metod adı farklıysa buradaki ismi düzenleyebilirsin
         assertDoesNotThrow(() -> walletService.transferMoney(request));
-
-        // Assert (Doğrulama)
         assertEquals(new BigDecimal("400.00"), senderWallet.getBalance());
         assertEquals(new BigDecimal("200.00"), receiverWallet.getBalance());
 
@@ -79,7 +73,6 @@ class WalletServiceTest {
     @Test
     @DisplayName("Yetersiz Bakiye Durumunda Hata Fırlatmalı")
     void transfer_InsufficientBalance_ShouldThrowException() {
-        // Arrange (Hazırlık)
         TransferRequest request = new TransferRequest();
         request.setFromIban("TR111");
         request.setToIban("TR222");
@@ -87,11 +80,7 @@ class WalletServiceTest {
 
         when(walletRepository.findByIbanWithLock("TR111")).thenReturn(Optional.of(senderWallet));
         when(walletRepository.findByIbanWithLock("TR222")).thenReturn(Optional.of(receiverWallet));
-
-        // Act & Assert (Eylem ve Doğrulama - Herhangi bir RuntimeException fırlatmasını bekliyoruz)
         assertThrows(RuntimeException.class, () -> walletService.transferMoney(request));
-
-        // Bakiye yetersiz olduğu için kayıt işlemleri yapılmamalı
         verify(walletRepository, never()).save(any());
     }
 }

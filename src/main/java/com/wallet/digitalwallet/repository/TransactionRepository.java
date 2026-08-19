@@ -15,8 +15,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
 
     @Query("SELECT t FROM Transaction t WHERE t.fromIban = :iban OR t.toIban = :iban ORDER BY t.createdAt DESC")
     List<Transaction> findAllByIbanOrderByCreatedAtDesc(@Param("iban") String iban);
-
-    // Hem tarih hem ID kontrolü ile benzersiz ve kararlı işlem sıra numarası hesaplar
     @Query("SELECT COUNT(t) FROM Transaction t WHERE " +
             "(t.fromIban IN :ibans OR t.toIban IN :ibans) " +
             "AND (t.createdAt < :date OR (t.createdAt = :date AND t.id <= :id))")

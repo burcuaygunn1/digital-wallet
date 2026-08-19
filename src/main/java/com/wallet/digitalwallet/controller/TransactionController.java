@@ -27,10 +27,7 @@ public class TransactionController {
     private final PdfService pdfService;
     private final TransactionService transactionService;
 
-    /**
-     * Oturum açmış kullanıcının kendi işlemlerini getirir.
-     * İster sade (filtresiz) ister query param ile filtreli olarak çağrılabilir.
-     */
+    
     @GetMapping("/my")
     public ResponseEntity<Page<Transaction>> getMyTransactions(
             Principal principal,
@@ -40,18 +37,13 @@ public class TransactionController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        // Parametreler gönderilmezse (null ise) varsayılan olarak tüm işlemleri getirir
         Page<Transaction> transactions = transactionService.getMyFilteredTransactions(
                 principal.getName(), minAmount, maxAmount, startDate, endDate, pageable
         );
         return ResponseEntity.ok(transactions);
     }
 
-    /**
-     * Dekont Görüntüleme ve İndirme Endpoint'i
-     * @param id İşlem ID
-     * @param action 'inline' (tarayıcıda aç) veya 'download'/'attachment' (dosya indir)
-     */
+    
     @GetMapping("/{id}/pdf")
     public ResponseEntity<byte[]> getReceipt(
             @PathVariable Long id,
@@ -74,9 +66,7 @@ public class TransactionController {
                 .body(pdfBytes);
     }
 
-    /**
-     * Admin veya Genel Arama Endpoint'i (İsteğe bağlı IBAN veya tutar/tarih ile arama)
-     */
+    
     @GetMapping("/search")
     public ResponseEntity<Page<Transaction>> searchTransactions(
             @RequestParam(required = false) String iban,

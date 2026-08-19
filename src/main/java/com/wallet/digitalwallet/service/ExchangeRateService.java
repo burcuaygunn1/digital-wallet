@@ -34,8 +34,6 @@ public class ExchangeRateService {
         } catch (Exception e) {
             System.err.println("Doviz API baglanti hatasi: " + e.getMessage());
         }
-
-        // Dış API'ye erişilemezse veya kur bulunamazsa varsayılan fallback oranları:
         return getFallbackRate(fromCurrency, toCurrency);
     }
 

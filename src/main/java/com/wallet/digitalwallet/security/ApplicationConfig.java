@@ -21,7 +21,6 @@ public class ApplicationConfig {
 
     @Bean
     public UserDetailsService userDetailsService() {
-        // Veritabanına bağlanıp e-posta adresine göre kullanıcıyı buluyoruz
         return username -> userRepository.findByEmail(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Kullanıcı bulunamadı: " + username));
     }
@@ -29,9 +28,7 @@ public class ApplicationConfig {
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        // Hangi UserDetailsService kullanılacak?
         authProvider.setUserDetailsService(userDetailsService());
-        // Şifreleri kontrol ederken hangi encoder kullanılacak?
         authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
     }

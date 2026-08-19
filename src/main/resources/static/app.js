@@ -1,9 +1,5 @@
 const API_BASE_URL = 'http://localhost:8080/api/v1';
-
-// Global Cüzdan Hafızası
 let allWallets = [];
-
-// --- Modern ve Şık Bildirim Gösterici (Toast) ---
 function showToast(message, type = 'success') {
     const container = document.getElementById('toastContainer');
     if (!container) return;
@@ -69,21 +65,15 @@ function showAlert(elementId, message, bgClass) {
     const isError = bgClass && (bgClass.includes('red') || bgClass.includes('error'));
     showToast(message, isError ? 'error' : 'success');
 }
-
-// --- Dark Mode Başlangıç Kontrolü ---
 if (localStorage.getItem('theme') === 'dark') {
     document.documentElement.classList.add('dark');
 }
-
-// --- Global Modal ve Yardımcı Fonksiyonlar ---
 function openModal(modalId) {
     document.getElementById(modalId)?.classList.remove('hidden');
 }
 
 function closeModal(modalId) {
     document.getElementById(modalId)?.classList.add('hidden');
-
-    // PDF modalı kapatılıyorsa iframe kaynağını temizle ve bellekten düşür
     if (modalId === 'pdfModal') {
         const iframe = document.getElementById('pdfIframe');
         if (iframe && iframe.src) {
@@ -109,8 +99,6 @@ function openExchangeModal() {
 function openCreateWalletModal() {
     openModal('createWalletModal');
 }
-
-// --- Sekme Değiştirme Fonksiyonu (Global Scope) ---
 function switchTab(tabId, element) {
     document.querySelectorAll('.settings-content').forEach(tab => tab.classList.add('hidden'));
 
@@ -128,8 +116,6 @@ function switchTab(tabId, element) {
         activeBtn.className = "tab-btn w-full flex items-center space-x-3 p-3 rounded-lg bg-indigo-600 text-white shadow-md transition";
     }
 }
-
-// --- Cüzdan Yönetimi ve UI Güncelleme Fonksiyonları ---
 function updateWalletSelector() {
     const selector = document.getElementById('walletSelector');
     if (selector) {
@@ -174,23 +160,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (token) {
         showDashboard();
     }
-
-    // --- Ayarlar Sekme Geçişleri ---
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const targetTab = btn.getAttribute('data-tab');
             if (targetTab) switchTab(targetTab, btn);
         });
     });
-
-    // --- Dark Mode Toggle Listener ---
     document.getElementById('darkModeToggle')?.addEventListener('click', () => {
         const isDark = document.documentElement.classList.toggle('dark');
         localStorage.setItem('theme', isDark ? 'dark' : 'light');
         updateDarkModeUI();
     });
-
-    // --- Auth Sekme Geçiş Mantığı ---
     document.getElementById('tabLoginBtn')?.addEventListener('click', () => {
         document.getElementById('loginForm')?.classList.remove('hidden');
         document.getElementById('registerForm')?.classList.add('hidden');
@@ -204,8 +184,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('tabRegisterBtn').className = "w-1/2 py-2 text-center font-bold border-b-2 border-indigo-600 text-indigo-600";
         document.getElementById('tabLoginBtn').className = "w-1/2 py-2 text-center font-bold text-gray-500 hover:text-indigo-600 dark:text-gray-400";
     });
-
-    // --- Kayıt Formu ---
     document.getElementById('registerForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const firstName = document.getElementById('regFirstName').value.trim();
@@ -240,8 +218,6 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast('Sunucuya bağlanılamadı!', 'error');
         }
     });
-
-    // --- Giriş Formu ---
     document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = document.getElementById('loginEmail').value.trim();
@@ -274,14 +250,10 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast('Sunucuya bağlanılamadı!', 'error');
         }
     });
-
-    // --- Çıkış Butonu ---
     document.getElementById('logoutBtn')?.addEventListener('click', () => {
         localStorage.removeItem('jwtToken');
         window.location.reload();
     });
-
-    // --- Para Transfer Formu ---
     document.getElementById('transferForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const token = localStorage.getItem('jwtToken');
@@ -329,8 +301,6 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast('İşlem sırasında bir hata oluştu.', 'error');
         }
     });
-
-    // --- Bakiye Yükleme Formu ---
     document.getElementById('depositForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const token = localStorage.getItem('jwtToken');
@@ -372,8 +342,6 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast('Bakiye yüklenirken bir hata oluştu.', 'error');
         }
     });
-
-    // --- Yeni Cüzdan Oluşturma Formu ---
     document.getElementById('createWalletForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const token = localStorage.getItem('jwtToken');
@@ -406,8 +374,6 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast("Sunucu hatası oluştu.", 'error');
         }
     });
-
-    // --- Döviz Dönüşüm Formu ---
     document.getElementById('exchangeForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const token = localStorage.getItem('jwtToken');
@@ -452,8 +418,6 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast("Dönüşüm gerçekleştirilirken bir hata oluştu.", 'error');
         }
     });
-
-    // --- Ayarlar Modalı Açma ---
     document.getElementById('settingsBtn')?.addEventListener('click', async (e) => {
         e.preventDefault();
         await fetchUserProfile();
@@ -463,8 +427,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('closeSettingsBtn')?.addEventListener('click', () => {
         closeModal('settingsModal');
     });
-
-    // --- Modal Dışına Tıklanınca Kapatma ---
     window.addEventListener('click', (e) => {
         if (e.target.id === 'settingsModal') closeModal('settingsModal');
         if (e.target.id === 'depositModal') closeModal('depositModal');
@@ -472,8 +434,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target.id === 'createWalletModal') closeModal('createWalletModal');
         if (e.target.id === 'pdfModal') closeModal('pdfModal');
     });
-
-    // --- Profil Güncelleme ---
     document.getElementById('updateProfileForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const token = localStorage.getItem('jwtToken');
@@ -512,8 +472,6 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast('Sunucu hatası!', 'error');
         }
     });
-
-    // --- E-Posta Güncelleme ---
     document.getElementById('updateEmailForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const token = localStorage.getItem('jwtToken');
@@ -556,8 +514,6 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast('Sunucuya bağlanılamadı!', 'error');
         }
     });
-
-    // --- Şifre Güncelleme ---
     document.getElementById('updatePasswordForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const token = localStorage.getItem('jwtToken');
@@ -598,8 +554,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
-
-// --- Yardımcı ve Veri Yükleme Fonksiyonları ---
 
 function updateDarkModeUI() {
     const isDark = document.documentElement.classList.contains('dark');
@@ -743,13 +697,9 @@ async function loadTransactions() {
         console.error('Transactions load error:', e);
     }
 }
-
-// --- PDF İşleme Fonksiyonu (Görüntüle / İndir) ---
 async function handlePdf(id, action) {
     const token = localStorage.getItem('jwtToken');
     if (!token) return handleUnauthorized();
-
-    // Önbellek sorunlarını önlemek için t=... parametresi eklendi
     const actionParam = action === 'download' ? 'download' : 'inline';
     const url = `${API_BASE_URL}/transactions/${id}/pdf?action=${actionParam}&t=${Date.now()}`;
 
@@ -772,7 +722,6 @@ async function handlePdf(id, action) {
                 window.URL.revokeObjectURL(fileUrl);
                 showToast('Dekont indirildi.', 'info');
             } else {
-                // Önizleme modalını aç ve iframe/download butonunu güncelle
                 const iframe = document.getElementById('pdfIframe');
                 const downloadLink = document.getElementById('pdfDownloadLink');
 

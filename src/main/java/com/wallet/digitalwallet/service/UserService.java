@@ -40,8 +40,6 @@ public class UserService {
                 .build();
 
         User savedUser = userRepository.save(user);
-
-        // Otomatik Cüzdan Oluşturma
         Wallet defaultWallet = Wallet.builder()
                 .iban(generateRandomIban())
                 .currency("TRY")
@@ -104,30 +102,19 @@ public class UserService {
         userRepository.save(user);
     }
 
-    /**
-     * Kullanıcı E-Posta Güncelleme (Şifre Doğrulamalı)
-     */
+    
     @Transactional
     public AuthResponse updateEmail(String currentEmail, EmailUpdateRequest request) {
-        // 1. Kullanıcıyı bul
         User user = userRepository.findByEmail(currentEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı"));
-
-        // 2. Şifreyi doğrula (Güvenlik Katmanı)
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
             throw new BusinessException("Mevcut şifreniz hatalı! Email değiştirilemedi.");
         }
-
-        // 3. Yeni email kullanımda mı kontrol et
         if (userRepository.existsByEmail(request.getNewEmail())) {
             throw new BusinessException("Bu e-posta adresi zaten başka bir hesap tarafından kullanılıyor.");
         }
-
-        // 4. Güncelleme ve kaydet
         user.setEmail(request.getNewEmail());
         userRepository.save(user);
-
-        // 5. Yeni email ile taze Token üretimi
         String token = jwtService.generateToken(user.getEmail());
         return new AuthResponse(token, user.getEmail());
     }

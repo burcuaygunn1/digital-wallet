@@ -20,13 +20,8 @@ public interface WalletRepository extends JpaRepository<Wallet, Long> {
 
     boolean existsByIban(String iban);
 
-    /**
-     * Kullanıcının e-posta adresi üzerinden cüzdanlarını getiren özel sorgu.
-     * Spring Data JPA "UserEmail" kısmını otomatik olarak "user.email" ile eşleştirir.
-     */
+    
     List<Wallet> findByUserEmail(String email);
-
-    // Para transferi sırasında race condition'ı önlemek için cüzdanı veritabanı seviyesinde kilitler
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT w FROM Wallet w WHERE w.iban = :iban")
     Optional<Wallet> findByIbanWithLock(@Param("iban") String iban);

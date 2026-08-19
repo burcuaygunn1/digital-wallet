@@ -17,27 +17,21 @@ public class UserController {
 
     private final UserService userService;
 
-    /**
-     * Yeni Kullanıcı Kaydı Endpoint'i (Public)
-     */
+    
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> registerUser(@Valid @RequestBody UserRegisterRequest request) {
         AuthResponse response = userService.registerUser(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
-    /**
-     * Kullanıcı Giriş Endpoint'i (Public)
-     */
+    
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = userService.login(request);
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Şifre Güncelleme Endpoint'i (Protected)
-     */
+    
     @PutMapping("/update-password")
     public ResponseEntity<String> updatePassword(
             Principal principal,
@@ -51,10 +45,7 @@ public class UserController {
         return ResponseEntity.ok("Şifre başarıyla güncellendi.");
     }
 
-    /**
-     * Kullanıcı Profil Bilgilerini Getirme Endpoint'i (Protected)
-     * GET /api/v1/users/me/profile
-     */
+    
     @GetMapping("/me/profile")
     public ResponseEntity<UserProfileResponse> getMyProfile(Principal principal) {
         if (principal == null) {
@@ -63,10 +54,7 @@ public class UserController {
         return ResponseEntity.ok(userService.getUserProfile(principal.getName()));
     }
 
-    /**
-     * Kullanıcı Profil Bilgilerini Güncelleme Endpoint'i (Ad / Soyad) (Protected)
-     * PUT /api/v1/users/me/profile
-     */
+    
     @PutMapping("/me/profile")
     public ResponseEntity<String> updateProfile(
             Principal principal,
@@ -80,11 +68,7 @@ public class UserController {
         return ResponseEntity.ok("Profil başarıyla güncellendi.");
     }
 
-    /**
-     * Kullanıcı E-Posta Güncelleme Endpoint'i (Protected)
-     * PUT /api/v1/users/me/email
-     * E-posta değiştiği için taze JWT token döner.
-     */
+    
     @PutMapping("/me/email")
     public ResponseEntity<AuthResponse> updateEmail(
             Principal principal,

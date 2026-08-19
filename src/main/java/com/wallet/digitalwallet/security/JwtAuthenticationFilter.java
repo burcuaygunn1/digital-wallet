@@ -33,8 +33,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
 
         final String authHeader = request.getHeader("Authorization");
-
-        // Header boşsa veya Bearer ile başlamıyorsa zinciri devam ettir ve çık
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
@@ -71,9 +69,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
         String path = request.getRequestURI();
-
-        // SADECE login ve register endpoint'leri filteden muaf olmalı.
-        // /api/v1/users/me/profile vb. istekler artık bu filtreye girecek ve JWT başarıyla okunacak!
         return "OPTIONS".equalsIgnoreCase(request.getMethod()) ||
                 path.equals("/api/v1/users/login") ||
                 path.equals("/api/v1/users/register") ||

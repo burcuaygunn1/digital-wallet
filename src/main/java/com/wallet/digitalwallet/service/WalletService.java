@@ -30,9 +30,7 @@ public class WalletService {
     private final UserRepository userRepository;
     private final ExchangeRateService exchangeRateService;
 
-    /**
-     * Kullanıcının emaili üzerinden cüzdanlarını getirir.
-     */
+    
     @Transactional(readOnly = true)
     public List<WalletResponse> getUserWalletsByEmail(String email) {
         return walletRepository.findByUserEmail(email).stream()
@@ -45,9 +43,7 @@ public class WalletService {
                 .toList();
     }
 
-    /**
-     * Kullanıcının ilk cüzdanını döner.
-     */
+    
     @Transactional(readOnly = true)
     public WalletResponse getWalletByEmail(String email) {
         return walletRepository.findByUserEmail(email).stream()
@@ -73,23 +69,17 @@ public class WalletService {
                 .toList();
     }
 
-    /**
-     * WalletController için yönlendirme metodu (Yeni cüzdan oluşturma)
-     */
+    
     @Transactional
     public WalletResponse createWalletForUser(String email, String currency) {
         return createNewWallet(email, currency);
     }
 
-    /**
-     * Yeni bir para biriminde cüzdan oluşturur.
-     */
+    
     @Transactional
     public WalletResponse createNewWallet(String email, String currency) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı: " + email));
-
-        // Zaten bu para biriminde cüzdanı var mı kontrol et
         boolean exists = user.getWallets().stream()
                 .anyMatch(w -> w.getCurrency().equalsIgnoreCase(currency));
         if (exists) {
@@ -112,17 +102,13 @@ public class WalletService {
                 .build();
     }
 
-    /**
-     * WalletController için ExchangeRequest kabul eden wrapper metot
-     */
+    
     @Transactional
     public String exchangeMoney(String email, ExchangeRequest request) {
         return exchangeCurrency(email, request.getFromIban(), request.getToIban(), request.getAmount());
     }
 
-    /**
-     * Kullanıcının kendi cüzdanları arasında döviz dönüşümü / transfer yapmasını sağlar.
-     */
+    
     @Transactional
     public String exchangeCurrency(String email, String fromIban, String toIban, BigDecimal amount) {
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -137,8 +123,6 @@ public class WalletService {
                 .orElseThrow(() -> new ResourceNotFoundException("Kaynak cüzdan bulunamadı: " + fromIban));
         Wallet toWallet = walletRepository.findByIbanWithLock(toIban)
                 .orElseThrow(() -> new ResourceNotFoundException("Hedef cüzdan bulunamadı: " + toIban));
-
-        // Güvenlik: Her iki cüzdan da isteği atan kullanıcıya mı ait?
         if (!fromWallet.getUser().getEmail().equals(email) || !toWallet.getUser().getEmail().equals(email)) {
             throw new BusinessException("Sadece kendi cüzdanlarınız arasında dönüşüm yapabilirsiniz.");
         }
@@ -146,19 +130,13 @@ public class WalletService {
         if (fromWallet.getBalance().compareTo(amount) < 0) {
             throw new BusinessException("Yetersiz bakiye! Mevcut bakiye: " + fromWallet.getBalance());
         }
-
-        // Döviz Kuru Hesaplama
         BigDecimal rate = exchangeRateService.getExchangeRate(fromWallet.getCurrency(), toWallet.getCurrency());
         BigDecimal convertedAmount = exchangeRateService.convert(amount, rate);
-
-        // Bakiyeleri güncelle
         fromWallet.setBalance(fromWallet.getBalance().subtract(amount));
         toWallet.setBalance(toWallet.getBalance().add(convertedAmount));
 
         walletRepository.save(fromWallet);
         walletRepository.save(toWallet);
-
-        // İşlemi kaydet
         transactionRepository.save(Transaction.builder()
                 .fromIban(fromIban)
                 .toIban(toIban)
@@ -173,9 +151,7 @@ public class WalletService {
                 amount, fromWallet.getCurrency(), convertedAmount, toWallet.getCurrency(), rate);
     }
 
-    /**
-     * Hesaba Bakiye Yükleme (Deposit) İşlemi
-     */
+    
     @Transactional
     public void depositMoney(String iban, BigDecimal amount) {
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -187,8 +163,6 @@ public class WalletService {
 
         wallet.setBalance(wallet.getBalance().add(amount));
         walletRepository.save(wallet);
-
-        // İşlem geçmişine kaydet
         Transaction transaction = Transaction.builder()
                 .fromIban("SYSTEM_DEPOSIT")
                 .toIban(iban)
@@ -202,9 +176,7 @@ public class WalletService {
         transactionRepository.save(transaction);
     }
 
-    /**
-     * Cüzdanlar Arası Para Transferi
-     */
+    
     @Transactional
     public String transferMoney(TransferRequest request) {
         if (request.getFromIban().equals(request.getToIban())) {
@@ -250,9 +222,7 @@ public class WalletService {
                 convertedAmount, toWallet.getCurrency(), exchangeRate);
     }
 
-    /**
-     * İşlem Geçmişini Getirme
-     */
+    
     @Transactional(readOnly = true)
     public List<TransactionResponse> getTransactionHistory(String iban) {
         Wallet wallet = walletRepository.findByIban(iban)
@@ -276,9 +246,7 @@ public class WalletService {
         }).toList();
     }
 
-    /**
-     * Rastgele TR IBAN Oluşturucu Yardımcı Metot
-     */
+    
     private String generateRandomIban() {
         Random random = new Random();
         StringBuilder iban = new StringBuilder("TR");
